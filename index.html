@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Study Dashboard</title>
+
+<style>
+body{
+  font-family:Arial;
+  margin:0;
+  color:white;
+  text-align:center;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  transition: background-image 1s ease-in-out;
+}
+
+.overlay{
+  background:rgba(0,0,0,0.6);
+  min-height:100vh;
+  padding:20px;
+}
+
+button{
+  padding:10px 20px;
+  margin:5px;
+  cursor:pointer;
+}
+
+input{
+  padding:8px;
+  width:80px;
+}
+
+.hidden{
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+<div id="loginPage">
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Enter Name"><br><br>
+  <button onclick="login()">Login</button>
+</div>
+
+<div id="dashboard" class="hidden">
+
+  <h2>Smart Study Panel</h2>
+
+  <h3>Add Study Time</h3>
+  <select id="subject">
+    <option>Math</option>
+    <option>English</option>
+    <option>GS</option>
+    <option>Reasoning</option>
+  </select>
+  <input type="number" id="minutes" placeholder="Min">
+  <button onclick="addStudy()">Add</button>
+
+  <h3>Mock</h3>
+  <input type="number" id="mockMin" placeholder="Min">
+  <button onclick="addMock()">Start Mock</button>
+
+  <h3>Sleep / Rest</h3>
+  <input type="number" id="sleepMin" placeholder="Min">
+  <button onclick="addSleep()">Add Rest</button>
+
+  <h3>Office</h3>
+  <button onclick="officeIn()">Office In</button>
+  <button onclick="officeOut()">Office Out</button>
+
+  <br><br>
+  <button onclick="logout()">Logout</button>
+
+</div>
+
+</div>
+
+<script>
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4XPpldIrnPGe93znf4qEAXfaiWU1llnIjou07SoVYx9R6Mc9b0VBHE052Tr7IuaHCeA/exec  ";
+
+/* ================= LOGIN ================= */
+
+let currentUser = localStorage.getItem("user");
+
+if(currentUser){
+  showDashboard();
+}
+
+function login(){
+  const name = document.getElementById("username").value;
+  if(name){
+    localStorage.setItem("user", name);
+    currentUser = name;
+    showDashboard();
+  }
+}
+
+function logout(){
+  localStorage.removeItem("user");
+  location.reload();
+}
+
+function showDashboard(){
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+}
+
+/* ================= SEND DATA ================= */
+
+function sendData(text){
+  fetch(SCRIPT_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      message:{
+        chat:{id:123},
+        text:text,
+        from:{username:currentUser}
+      }
+    })
+  });
+}
+
+function addStudy(){
+  const subject = document.getElementById("subject").value.toLowerCase();
+  const min = document.getElementById("minutes").value;
+  if(min){
+    sendData(subject + min);
+    alert("Added");
+  }
+}
+
+function addMock(){
+  const min = document.getElementById("mockMin").value;
+  if(min){
+    sendData("mock" + min);
+    alert("Mock Added");
+  }
+}
+
+function addSleep(){
+  const min = document.getElementById("sleepMin").value;
+  if(min){
+    sendData("sleep" + min);
+    alert("Rest Added");
+  }
+}
+
+function officeIn(){
+  sendData("office in");
+  alert("Office Started");
+}
+
+function officeOut(){
+  sendData("office out");
+  alert("Office Ended");
+}
+
+/* ================= AUTO WALLPAPER ================= */
+
+const keywords = [
+  "study desk",
+  "minimal dark",
+  "galaxy space",
+  "mountain night",
+  "productivity setup",
+  "abstract dark wallpaper"
+];
+
+function changeWallpaper(){
+  const random = keywords[Math.floor(Math.random()*keywords.length)];
+  const url = `https://source.unsplash.com/1920x1080/?${random}&${new Date().getTime()}`;
+  document.body.style.backgroundImage = `url('${url}')`;
+}
+
+// First load
+changeWallpaper();
+
+// Change every 15 minutes
+setInterval(changeWallpaper, 900000);
+
+</script>
+
+</body>
+</html>
