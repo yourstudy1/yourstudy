@@ -2,21 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smart Study OS</title>
-
 <style>
 body{
 margin:0;
-font-family:Arial;
 background:#111;
 color:white;
-background-size:cover;
-background-position:center;
-transition:0.5s;
+font-family:Arial;
 text-align:center;
 }
-
 button{
 padding:6px 12px;
 margin:5px;
@@ -24,48 +18,41 @@ border:none;
 border-radius:5px;
 cursor:pointer;
 }
-
 #subject{font-size:40px;margin-top:15vh;}
-#remaining{font-size:30px;margin-top:10px;}
-#warningBox{margin-top:20px;}
-.red{color:red;}
+#remaining{font-size:28px;}
 .orange{color:orange;}
+.red{color:red;}
 </style>
 </head>
-
 <body>
 
 <div id="clock" style="font-size:60px;margin-top:40px;"></div>
-
 <div id="subject"></div>
 <div id="remaining"></div>
-
-<div id="warningBox" style="display:none;"></div>
+<div id="warningBox"></div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbzxGq0YZIQRoMl1idQrUjbv-6jiVmu4ekawjFiIEc4F4KnHaLxm2tZruLzKXxDXUr977A/exec";
+const scriptURL="https://script.google.com/macros/s/AKfycbxq49CFhIWiKHxh69xPBczmBuiMcjw5YIoYuEq6lwZYybsAZWuG2Q9q8guseFWTa2Wd0A/exec";
 
 /* CLOCK */
 setInterval(()=>{
-const now=new Date();
-document.getElementById("clock").innerText=now.toLocaleTimeString();
+document.getElementById("clock").innerText=new Date().toLocaleTimeString();
 },1000);
-<div style="position:absolute; top:10px; left:10px;">
-  <a href="./admin.html">
-    <button style="font-size:12px;">ADMIN</button>
-  </a>
-</div>
-/* WALLPAPER */
-function changeWallpaper(){
-const url="https://picsum.photos/1600/900?random="+new Date().getTime();
-document.body.style.backgroundImage="url('"+url+"')";
-}
-changeWallpaper();
-setInterval(changeWallpaper,900000);
+
+/* TEST GET DATA */
+fetch(scriptURL+"?action=getData")
+.then(res=>res.json())
+.then(data=>console.log("Server OK:",data))
+.catch(err=>console.log("Server Error:",err));
 
 /* ROUTINE LOAD */
-let routine=JSON.parse(localStorage.getItem("routine"))||[];
+let routine=[];
+try{
+routine=JSON.parse(localStorage.getItem("routine"))||[];
+}catch(e){
+routine=[];
+}
 
 let activeIndex=-1;
 let studyTimer;
@@ -79,9 +66,8 @@ setInterval(checkSchedule,1000);
 function checkSchedule(){
 
 const now=new Date();
-const currentTime=
-String(now.getHours()).padStart(2,"0")+":"+
-String(now.getMinutes()).padStart(2,"0");
+const hh=String(now.getHours()).padStart(2,"0");
+const mm=String(now.getMinutes()).padStart(2,"0");
 
 routine.forEach((item,index)=>{
 
@@ -93,7 +79,7 @@ startDate.setSeconds(0);
 
 let diff=Math.floor((startDate-now)/60000);
 
-/* 10 MIN BEFORE START */
+/* 10 MIN BEFORE */
 if(diff===10 && activeIndex!==index){
 showPreWarning(index,item);
 }
@@ -108,16 +94,10 @@ function showPreWarning(index,item){
 activeIndex=index;
 warningSeconds=600;
 
-document.getElementById("subject").innerText=
-"Upcoming: "+item.subject;
-
-document.getElementById("subject").classList.remove("red");
-document.getElementById("subject").classList.add("orange");
-
-document.getElementById("warningBox").style.display="block";
+document.getElementById("subject").innerText="Upcoming: "+item.subject;
+document.getElementById("subject").className="orange";
 
 document.getElementById("warningBox").innerHTML=
-"⚠ "+item.subject+" starting in 10 min<br><br>"+
 "<button onclick='startNow()'>Start</button>"+
 "<button onclick='cancelNow()'>Cancel</button>"+
 "<button onclick='sameSubject()'>Same Subject</button>";
@@ -132,9 +112,8 @@ message:"Starting in 10 Minutes"
 })
 });
 
-/* WARNING COUNTDOWN */
+/* COUNTDOWN */
 clearInterval(warningTimer);
-
 warningTimer=setInterval(()=>{
 
 warningSeconds--;
@@ -146,7 +125,6 @@ document.getElementById("remaining").innerText=
 "Warning: "+m+":"+String(s).padStart(2,"0");
 
 if(warningSeconds<=0){
-clearInterval(warningTimer);
 cancelNow();
 }
 
@@ -154,49 +132,35 @@ cancelNow();
 
 }
 
-/* START BUTTON */
+/* START */
 function startNow(){
-
 clearInterval(warningTimer);
-document.getElementById("warningBox").style.display="none";
-
+document.getElementById("warningBox").innerHTML="";
 startStudy(routine[activeIndex]);
-
 }
 
 /* SAME SUBJECT */
 function sameSubject(){
-
 clearInterval(warningTimer);
-document.getElementById("warningBox").style.display="none";
-
 startStudy(routine[activeIndex]);
-
 }
 
 /* CANCEL */
 function cancelNow(){
-
 clearInterval(warningTimer);
 clearInterval(studyTimer);
-
 document.getElementById("subject").innerText="CANCELLED";
-document.getElementById("subject").classList.remove("orange");
-document.getElementById("subject").classList.add("red");
-
+document.getElementById("subject").className="red";
 document.getElementById("remaining").innerText="";
-document.getElementById("warningBox").style.display="none";
-
+document.getElementById("warningBox").innerHTML="";
 }
 
-/* STUDY TIMER */
+/* STUDY */
 function startStudy(item){
 
 studySeconds=item.duration*60;
-
 document.getElementById("subject").innerText=item.subject;
-document.getElementById("subject").classList.remove("orange");
-document.getElementById("subject").classList.remove("red");
+document.getElementById("subject").className="";
 
 clearInterval(studyTimer);
 
@@ -211,7 +175,6 @@ document.getElementById("remaining").innerText=
 "Study: "+m+":"+String(s).padStart(2,"0");
 
 if(studySeconds<=0){
-clearInterval(studyTimer);
 cancelNow();
 }
 
@@ -220,6 +183,5 @@ cancelNow();
 }
 
 </script>
-
 </body>
 </html>
