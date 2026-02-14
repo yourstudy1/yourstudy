@@ -7,89 +7,78 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
-  --bg:#111;
-  --card:rgba(0,0,0,0.7);
-  --text:#fff;
-}
-.light{
-  --bg:#f4f4f4;
-  --card:rgba(255,255,255,0.9);
-  --text:#000;
-}
 body{
   margin:0;
   font-family:Arial;
-  background:var(--bg);
-  color:var(--text);
+  background:#111;
+  color:white;
   background-size:cover;
   background-position:center;
   transition:0.5s;
 }
-.container{
-  padding:15px;
+.light{ background:#f4f4f4; color:black; }
+
+.container{ padding:15px; }
+
+button{
+  padding:6px 12px;
+  margin:5px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
 }
+
 .card{
-  background:var(--card);
+  background:rgba(0,0,0,0.6);
   padding:15px;
   border-radius:10px;
   margin-bottom:15px;
 }
+
 table{
   width:100%;
   border-collapse:collapse;
-  font-size:14px;
 }
 th,td{
   padding:6px;
   border-bottom:1px solid gray;
   text-align:center;
 }
-button{
-  padding:6px 12px;
-  margin:5px;
-  cursor:pointer;
-  border:none;
-  border-radius:5px;
-}
-.topControls{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-#tabModeBtn{
-  position:fixed;
-  bottom:10px;
-  right:10px;
-  background:red;
-  color:white;
-}
+
+/* TAB MODE */
 #tabView{
   display:none;
-  height:100vh;
-  background:var(--card);
   text-align:center;
-  padding-top:40vh;
-  font-size:28px;
+  height:100vh;
+  padding-top:15vh;
+  background:rgba(0,0,0,0.7);
 }
-@media(max-width:600px){
-  table{font-size:11px;}
+
+#clock{ font-size:60px; }
+#date{ font-size:22px; margin-bottom:10px; }
+#subject{ font-size:26px; margin:10px; }
+#remaining{ font-size:22px; }
+
+.warningBox{
+  display:none;
+  background:black;
+  padding:15px;
+  border-radius:10px;
+  margin-top:15px;
 }
+
+.red{ color:red; }
 </style>
 </head>
 
 <body>
 
-<div id="mainView">
+<div id="mainView" class="container">
 
-<div class="container">
-
-<div class="topControls">
-<h2>Smart Study Dashboard</h2>
-<div>
+<h2>Dashboard 
 <button onclick="toggleTheme()">Theme</button>
-</div>
-</div>
+<button onclick="enableTab()">Tab Mode</button>
+</h2>
 
 <div class="card">
 <canvas id="chart"></canvas>
@@ -114,47 +103,104 @@ button{
 
 </div>
 
-<button id="tabModeBtn" onclick="enableTabMode()">Tab Mode</button>
-
-</div>
-
-<!-- TAB MODE FULLSCREEN -->
+<!-- TAB MODE VIEW -->
 <div id="tabView">
-<div>
-Smart Study Tab Mode<br><br>
-<button onclick="disableTabMode()">Exit Tab Mode</button>
-<br><br>
-<button onclick="toggleTheme()">Theme</button>
+<div id="clock"></div>
+<div id="date"></div>
+
+<div>Temp - 10° | Humidity - 55%</div>
+
+<div id="subject"></div>
+<div id="remaining"></div>
+
+<div class="warningBox" id="warningBox">
+⚠ Warning Time Over<br><br>
+<button onclick="attempt()">3 Attempt</button>
+<button onclick="final()">Final</button>
+<button onclick="cancel()">Cancel</button>
 </div>
+
+<br>
+<button onclick="disableTab()">Exit</button>
 </div>
 
 <script>
 
 const scriptURL="https://script.google.com/macros/s/AKfycbyZTo_JXD9CVeHXr5takTUJybmaA7QP9-_5ViEcYHn4e8O5R_7Xbz8CfACTfVV_GQMq/exec";
+
 let chart;
+let remainingSeconds=1500; // 25 min default
+let timer;
+let warningActive=false;
 
 /* THEME */
 function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
-/* TAB MODE */
-function enableTabMode(){
-  document.getElementById("mainView").style.display="none";
-  document.getElementById("tabView").style.display="block";
-}
-function disableTabMode(){
-  document.getElementById("tabView").style.display="none";
-  document.getElementById("mainView").style.display="block";
-}
-
-/* WALLPAPER AUTO */
+/* WALLPAPER */
 function changeWallpaper(){
   const url="https://picsum.photos/1600/900?random="+new Date().getTime();
   document.body.style.backgroundImage="url('"+url+"')";
 }
 changeWallpaper();
-setInterval(changeWallpaper,900000); // 15 min
+setInterval(changeWallpaper,900000);
+
+/* CLOCK */
+function updateClock(){
+  const now=new Date();
+  document.getElementById("clock").innerText=
+    now.toLocaleTimeString();
+  document.getElementById("date").innerText=
+    now.toDateString();
+}
+setInterval(updateClock,1000);
+
+/* TAB MODE */
+function enableTab(){
+  document.getElementById("mainView").style.display="none";
+  document.getElementById("tabView").style.display="block";
+  startTimer();
+}
+function disableTab(){
+  document.getElementById("tabView").style.display="none";
+  document.getElementById("mainView").style.display="block";
+  clearInterval(timer);
+}
+
+/* TIMER SYSTEM */
+function startTimer(){
+  remainingSeconds=1500; // 25 min
+  warningActive=false;
+  document.getElementById("remaining").classList.remove("red");
+  timer=setInterval(()=>{
+    remainingSeconds--;
+    let m=Math.floor(remainingSeconds/60);
+    let s=remainingSeconds%60;
+    document.getElementById("remaining").innerText=
+      "Remaining: "+m+":"+String(s).padStart(2,"0");
+
+    if(remainingSeconds<=0 && !warningActive){
+      warningActive=true;
+      document.getElementById("warningBox").style.display="block";
+    }
+  },1000);
+}
+
+function attempt(){
+  remainingSeconds=300; // 5 min extra
+  document.getElementById("warningBox").style.display="none";
+}
+
+function final(){
+  remainingSeconds=60;
+  document.getElementById("warningBox").style.display="none";
+}
+
+function cancel(){
+  document.getElementById("warningBox").style.display="none";
+  document.getElementById("remaining").classList.add("red");
+}
 
 /* LOAD DATA + GRAPH */
 function loadData(){
@@ -205,8 +251,7 @@ borderWidth:2
 }
 });
 
-})
-.catch(err=>console.log("Fetch Error:",err));
+});
 }
 
 loadData();
