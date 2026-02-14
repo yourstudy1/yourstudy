@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#111;
+color:white;
+padding:20px;
+}
+input{
+display:block;
+width:100%;
+padding:10px;
+margin:10px 0;
+}
+button{
+padding:10px;
+width:100%;
+cursor:pointer;
+}
+#panel{display:none;}
+</style>
+</head>
+
+<body>
+
+<h2>Admin Login</h2>
+<input type="password" id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+
+<div id="panel">
+<h3>Add Study Entry</h3>
+
+<input type="number" id="math" placeholder="Math">
+<input type="number" id="english" placeholder="English">
+<input type="number" id="gs" placeholder="GS">
+<input type="number" id="reasoning" placeholder="Reasoning">
+<input type="number" id="mock" placeholder="Mock">
+
+<button onclick="sendData()">Save</button>
+</div>
+
+<script>
+const scriptURL="YOUR_WEB_APP_URL";
+const password="king2026";
+
+function login(){
+if(document.getElementById("pass").value===password){
+document.getElementById("panel").style.display="block";
+}else{
+alert("Wrong Password");
+}
+}
+
+function sendData(){
+fetch(scriptURL,{
+method:"POST",
+body:new URLSearchParams({
+math:document.getElementById("math").value||0,
+english:document.getElementById("english").value||0,
+gs:document.getElementById("gs").value||0,
+reasoning:document.getElementById("reasoning").value||0,
+mock:document.getElementById("mock").value||0
+})
+}).then(()=>alert("Saved"));
+}
+</script>
+
+</body>
+</html>
