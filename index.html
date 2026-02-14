@@ -3,126 +3,159 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study FINAL</title>
+<title>Smart Study Full Tab</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
 margin:0;
-font-family:Arial;
-background:#111;
+font-family:'Segoe UI',sans-serif;
+overflow:hidden;
 color:white;
 }
 
-.overlay{
-background:rgba(0,0,0,0.75);
-min-height:100vh;
-padding:20px;
+#main{
+height:100vh;
+width:100vw;
+background-size:cover;
+background-position:center;
+position:relative;
+transition:1s;
 }
 
-/* Dashboard */
-.card{
-background:rgba(255,255,255,0.08);
+.overlay{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.65);
 padding:20px;
+box-sizing:border-box;
+}
+
+.top{
+text-align:center;
+}
+
+#clock{
+font-size:70px;
+}
+
+#date{
+font-size:20px;
+opacity:0.8;
+}
+
+#temp{
+margin-top:10px;
+}
+
+#subject{
+font-size:50px;
+margin-top:15vh;
+}
+
+#remaining{
+font-size:30px;
+margin-top:10px;
+}
+
+.orange{color:orange;}
+.red{color:red;}
+
+#customBox{
+margin-top:20px;
+font-size:22px;
+}
+
+.graphBox{
+position:absolute;
+bottom:20px;
+left:50%;
+transform:translateX(-50%);
+width:90%;
+max-width:900px;
+background:rgba(255,255,255,0.08);
+padding:15px;
 border-radius:15px;
-margin-bottom:15px;
 backdrop-filter:blur(10px);
 }
 
 button{
-padding:8px 15px;
+padding:6px 14px;
 border:none;
 border-radius:8px;
 cursor:pointer;
-background:#333;
+margin:5px;
+background:#222;
 color:white;
 }
 
-.big{font-size:24px;}
-.red{color:red;}
-.orange{color:orange;}
-
-/* TAB MODE */
-#tabMode{
-display:none;
-text-align:center;
-height:100vh;
-background-size:cover;
-background-position:center;
-position:relative;
-}
-
-#clockBig{font-size:65px;margin-top:40px;}
-#subjectBig{font-size:45px;margin-top:18vh;}
-#remainBig{font-size:30px;}
-#warningBox{margin-top:20px;}
-
-#exitBtn{
-position:absolute;
-bottom:20px;
-right:20px;
-font-size:12px;
-background:rgba(0,0,0,0.6);
+#warningBox{
+margin-top:20px;
 }
 </style>
 </head>
 
 <body>
 
+<div id="main">
 <div class="overlay">
 
-<div id="dashboard">
-
-<h2>Smart Study</h2>
-
-<div class="card">
-<div id="time" class="big"></div>
+<div class="top">
+<div id="clock"></div>
 <div id="date"></div>
+<div id="temp"></div>
 </div>
 
-<div class="card">
-<div id="temperature"></div>
-</div>
-
-<div class="card">
+<div id="subject"></div>
+<div id="remaining"></div>
 <div id="customBox"></div>
-</div>
-
-<button onclick="enterTab()">Tab Mode</button>
-<a href="admin.html"><button>Admin</button></a>
-
-</div>
-
-<div id="tabMode">
-<div id="clockBig"></div>
-<div id="subjectBig"></div>
-<div id="remainBig"></div>
 <div id="warningBox"></div>
-<button id="exitBtn" onclick="exitTab()">EXIT</button>
+
+<div class="graphBox">
+<canvas id="studyChart"></canvas>
 </div>
 
+</div>
 </div>
 
 <script>
 
 const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
 
-/* ===== CLOCK + DATE ===== */
+/* ===== WALLPAPER 15 MIN ===== */
+function changeWallpaper(){
+const url="https://picsum.photos/1920/1080?random="+Date.now();
+document.getElementById("main").style.backgroundImage="url('"+url+"')";
+}
+changeWallpaper();
+setInterval(changeWallpaper,900000);
+
+/* ===== CLOCK ===== */
 setInterval(()=>{
 let now=new Date();
-document.getElementById("time").innerText=now.toLocaleTimeString();
+document.getElementById("clock").innerText=now.toLocaleTimeString();
 document.getElementById("date").innerText=now.toDateString();
-document.getElementById("clockBig").innerText=now.toLocaleTimeString();
 },1000);
 
-/* ===== TEMPERATURE (NO API KEY) ===== */
+/* ===== TEMPERATURE ===== */
 fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
 .then(res=>res.json())
 .then(data=>{
-document.getElementById("temperature").innerText=
+document.getElementById("temp").innerText=
 "Temperature: "+data.current_weather.temperature+"°C";
-}).catch(()=>{});
+});
 
-/* ===== CUSTOM NOTIFICATION (15 MIN) ===== */
+/* ===== COLOR REFLECT ===== */
+setInterval(()=>{
+let color=localStorage.getItem("textColor")||"white";
+document.getElementById("subject").style.color=color;
+},1000);
+
+/* ===== CUSTOM NOTIFICATION ===== */
 setInterval(()=>{
 let data=JSON.parse(localStorage.getItem("customNotification"));
 if(data){
@@ -134,34 +167,6 @@ document.getElementById("customBox").innerText="";
 }
 }
 },1000);
-
-/* ===== COLOR CHANGE REFLECT ===== */
-function applyColor(){
-let color=localStorage.getItem("textColor")||"white";
-document.getElementById("subjectBig").style.color=color;
-}
-setInterval(applyColor,1000);
-
-/* ===== AUTO WALLPAPER 15 MIN ===== */
-/* ===== GOOGLE AUTO WALLPAPER ===== */
-
-function changeWallpaper(){
-
-  const url = "https://picsum.photos/1600/900?random=" + Date.now();
-
-  const tab = document.getElementById("tabMode");
-
-  tab.style.backgroundImage = "url('" + url + "')";
-  tab.style.backgroundSize = "cover";
-  tab.style.backgroundPosition = "center";
-
-}
-
-/* First Load */
-changeWallpaper();
-
-/* Change Every 15 Min */
-setInterval(changeWallpaper, 900000);
 
 /* ===== ROUTINE ===== */
 let routine=[];
@@ -196,8 +201,8 @@ preWarning(index,item);
 function preWarning(index,item){
 activeIndex=index;
 
-document.getElementById("subjectBig").innerText="Upcoming: "+item.subject;
-document.getElementById("subjectBig").className="orange";
+document.getElementById("subject").innerText="Upcoming: "+item.subject;
+document.getElementById("subject").className="orange";
 
 document.getElementById("warningBox").innerHTML=
 "<button onclick='startNow()'>Start</button>"+
@@ -225,9 +230,9 @@ startStudy(routine[activeIndex]);
 
 function cancelNow(){
 clearInterval(studyTimer);
-document.getElementById("subjectBig").innerText="CANCELLED";
-document.getElementById("subjectBig").className="red";
-document.getElementById("remainBig").innerText="";
+document.getElementById("subject").innerText="CANCELLED";
+document.getElementById("subject").className="red";
+document.getElementById("remaining").innerText="";
 }
 
 /* ===== STUDY TIMER ===== */
@@ -240,9 +245,9 @@ seconds--;
 let m=Math.floor(seconds/60);
 let s=seconds%60;
 
-document.getElementById("subjectBig").innerText=item.subject;
-document.getElementById("subjectBig").className="";
-document.getElementById("remainBig").innerText=
+document.getElementById("subject").innerText=item.subject;
+document.getElementById("subject").className="";
+document.getElementById("remaining").innerText=
 m+":"+String(s).padStart(2,"0");
 
 if(seconds<=0){
@@ -252,16 +257,19 @@ cancelNow();
 },1000);
 }
 
-/* ===== TAB MODE ===== */
-function enterTab(){
-document.getElementById("dashboard").style.display="none";
-document.getElementById("tabMode").style.display="block";
-}
-
-function exitTab(){
-document.getElementById("dashboard").style.display="block";
-document.getElementById("tabMode").style.display="none";
-}
+/* ===== STUDY GRAPH ===== */
+new Chart(document.getElementById("studyChart"),{
+type:"bar",
+data:{
+labels:["Math","English","GS","Reason"],
+datasets:[{
+label:"Study Hours",
+data:[2,3,1,4],
+backgroundColor:"rgba(0,150,255,0.6)"
+}]
+},
+options:{responsive:true}
+});
 
 </script>
 </body>
