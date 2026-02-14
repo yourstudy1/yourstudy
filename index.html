@@ -8,26 +8,32 @@
 
 <style>
 :root{
+  --bg:#111;
   --card:rgba(0,0,0,0.7);
   --text:#fff;
 }
 .light{
+  --bg:#f4f4f4;
   --card:rgba(255,255,255,0.9);
   --text:#000;
 }
 body{
   margin:0;
   font-family:Arial;
+  background:var(--bg);
   color:var(--text);
   background-size:cover;
   background-position:center;
-  transition:background-image 1s ease-in-out;
+  transition:0.5s;
 }
-.overlay{
-  min-height:100vh;
+.container{
+  padding:15px;
+}
+.card{
   background:var(--card);
   padding:15px;
-  transition:0.3s;
+  border-radius:10px;
+  margin-bottom:15px;
 }
 table{
   width:100%;
@@ -36,13 +42,35 @@ table{
 }
 th,td{
   padding:6px;
-  text-align:center;
   border-bottom:1px solid gray;
+  text-align:center;
 }
 button{
-  padding:6px 10px;
+  padding:6px 12px;
   margin:5px;
   cursor:pointer;
+  border:none;
+  border-radius:5px;
+}
+.topControls{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+#tabModeBtn{
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  background:red;
+  color:white;
+}
+#tabView{
+  display:none;
+  height:100vh;
+  background:var(--card);
+  text-align:center;
+  padding-top:40vh;
+  font-size:28px;
 }
 @media(max-width:600px){
   table{font-size:11px;}
@@ -52,15 +80,22 @@ button{
 
 <body>
 
-<div class="overlay">
+<div id="mainView">
 
-<h2>
-Smart Study Dashboard
-<button onclick="toggleTheme()">Toggle Theme</button>
-</h2>
+<div class="container">
 
+<div class="topControls">
+<h2>Smart Study Dashboard</h2>
+<div>
+<button onclick="toggleTheme()">Theme</button>
+</div>
+</div>
+
+<div class="card">
 <canvas id="chart"></canvas>
+</div>
 
+<div class="card">
 <table>
 <thead>
 <tr>
@@ -75,9 +110,22 @@ Smart Study Dashboard
 </thead>
 <tbody id="tableBody"></tbody>
 </table>
+</div>
 
-<a href="admin.html"><button>Admin Panel</button></a>
+</div>
 
+<button id="tabModeBtn" onclick="enableTabMode()">Tab Mode</button>
+
+</div>
+
+<!-- TAB MODE FULLSCREEN -->
+<div id="tabView">
+<div>
+Smart Study Tab Mode<br><br>
+<button onclick="disableTabMode()">Exit Tab Mode</button>
+<br><br>
+<button onclick="toggleTheme()">Theme</button>
+</div>
 </div>
 
 <script>
@@ -85,19 +133,30 @@ Smart Study Dashboard
 const scriptURL="https://script.google.com/macros/s/AKfycbyZTo_JXD9CVeHXr5takTUJybmaA7QP9-_5ViEcYHn4e8O5R_7Xbz8CfACTfVV_GQMq/exec";
 let chart;
 
+/* THEME */
 function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
-/* 🔥 WALLPAPER SYSTEM */
+/* TAB MODE */
+function enableTabMode(){
+  document.getElementById("mainView").style.display="none";
+  document.getElementById("tabView").style.display="block";
+}
+function disableTabMode(){
+  document.getElementById("tabView").style.display="none";
+  document.getElementById("mainView").style.display="block";
+}
+
+/* WALLPAPER AUTO */
 function changeWallpaper(){
-  const url="https://source.unsplash.com/1600x900/?study,library,books&"+new Date().getTime();
+  const url="https://picsum.photos/1600/900?random="+new Date().getTime();
   document.body.style.backgroundImage="url('"+url+"')";
 }
 changeWallpaper();
 setInterval(changeWallpaper,900000); // 15 min
 
-/* 🔥 LOAD DATA + GRAPH */
+/* LOAD DATA + GRAPH */
 function loadData(){
 fetch(scriptURL)
 .then(res=>res.json())
@@ -110,11 +169,11 @@ let labels=[];
 for(let i=1;i<data.length;i++){
 
 let total=
-Number(data[i][1])+
-Number(data[i][2])+
-Number(data[i][3])+
-Number(data[i][4])+
-Number(data[i][5]);
+Number(data[i][1]||0)+
+Number(data[i][2]||0)+
+Number(data[i][3]||0)+
+Number(data[i][4]||0)+
+Number(data[i][5]||0);
 
 labels.push(new Date(data[i][0]).toLocaleDateString());
 totals.push(total);
@@ -139,14 +198,15 @@ type:"line",
 data:{
 labels:labels,
 datasets:[{
-label:"Total Study Time",
+label:"Total Study",
 data:totals,
 borderWidth:2
 }]
 }
 });
 
-});
+})
+.catch(err=>console.log("Fetch Error:",err));
 }
 
 loadData();
