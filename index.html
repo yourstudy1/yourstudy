@@ -3,111 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study ULTIMATE</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Smart Study FINAL</title>
 
 <style>
 body{
 margin:0;
-font-family:'Segoe UI',sans-serif;
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+font-family:Arial;
+background:#111;
 color:white;
-overflow-x:hidden;
-transition:0.4s;
 }
 
-/* Glass Card */
+.overlay{
+background:rgba(0,0,0,0.75);
+min-height:100vh;
+padding:20px;
+}
+
+/* Dashboard */
 .card{
 background:rgba(255,255,255,0.08);
-backdrop-filter:blur(15px);
-border-radius:20px;
-padding:25px;
-margin:20px;
-box-shadow:0 0 30px rgba(0,0,0,0.4);
+padding:20px;
+border-radius:15px;
+margin-bottom:15px;
+backdrop-filter:blur(10px);
 }
 
-/* Buttons */
 button{
-padding:8px 18px;
+padding:8px 15px;
 border:none;
-border-radius:10px;
+border-radius:8px;
 cursor:pointer;
-background:#1f1f1f;
+background:#333;
 color:white;
-transition:0.3s;
-}
-button:hover{
-background:#444;
 }
 
-h2{margin-left:20px;margin-top:20px;}
+.big{font-size:24px;}
+.red{color:red;}
+.orange{color:orange;}
 
-#dashboard{padding-bottom:50px;}
-
-.big{font-size:26px;font-weight:bold;}
-.small{color:#bbb;}
-
+/* TAB MODE */
 #tabMode{
 display:none;
+text-align:center;
 height:100vh;
 background-size:cover;
 background-position:center;
-text-align:center;
 position:relative;
-animation:fadeIn 0.6s ease;
 }
 
-@keyframes fadeIn{
-from{opacity:0;}
-to{opacity:1;}
-}
-
-#clockBig{font-size:80px;margin-top:40px;}
-#subjectBig{font-size:50px;margin-top:18vh;}
-#remainBig{font-size:32px;margin-top:10px;}
-.orange{color:orange;}
-.red{color:red;}
+#clockBig{font-size:65px;margin-top:40px;}
+#subjectBig{font-size:45px;margin-top:18vh;}
+#remainBig{font-size:30px;}
+#warningBox{margin-top:20px;}
 
 #exitBtn{
 position:absolute;
 bottom:20px;
-right:25px;
-background:rgba(0,0,0,0.6);
+right:20px;
 font-size:12px;
-}
-
-@media(max-width:768px){
-#clockBig{font-size:45px;}
-#subjectBig{font-size:28px;}
+background:rgba(0,0,0,0.6);
 }
 </style>
 </head>
 
 <body>
 
-<h2>Smart Study Dashboard</h2>
+<div class="overlay">
 
 <div id="dashboard">
 
+<h2>Smart Study</h2>
+
 <div class="card">
-<div class="big" id="liveTime"></div>
-<div class="small" id="liveDate"></div>
+<div id="time" class="big"></div>
+<div id="date"></div>
 </div>
 
 <div class="card">
-<div class="big">Study Analytics</div>
-<canvas id="chart"></canvas>
+<div id="temperature"></div>
 </div>
 
-<div style="margin-left:20px;">
-<button onclick="enterTab()">Enter Tab Mode</button>
+<div class="card">
+<div id="customBox"></div>
+</div>
+
+<button onclick="enterTab()">Tab Mode</button>
 <a href="admin.html"><button>Admin</button></a>
-</div>
 
 </div>
 
-<!-- TAB MODE -->
 <div id="tabMode">
 <div id="clockBig"></div>
 <div id="subjectBig"></div>
@@ -116,58 +100,57 @@ font-size:12px;
 <button id="exitBtn" onclick="exitTab()">EXIT</button>
 </div>
 
+</div>
+
 <script>
 
-const scriptURL="YOUR_WEB_APP_URL";
+const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
 
-/* CLOCK */
+/* ===== CLOCK + DATE ===== */
 setInterval(()=>{
 let now=new Date();
-document.getElementById("liveTime").innerText=now.toLocaleTimeString();
-document.getElementById("liveDate").innerText=now.toDateString();
+document.getElementById("time").innerText=now.toLocaleTimeString();
+document.getElementById("date").innerText=now.toDateString();
 document.getElementById("clockBig").innerText=now.toLocaleTimeString();
 },1000);
 
-/* AUTO WALLPAPER (STABLE SOURCE) */
+/* ===== TEMPERATURE (NO API KEY) ===== */
+fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
+.then(res=>res.json())
+.then(data=>{
+document.getElementById("temperature").innerText=
+"Temperature: "+data.current_weather.temperature+"°C";
+}).catch(()=>{});
+
+/* ===== CUSTOM NOTIFICATION (15 MIN) ===== */
+setInterval(()=>{
+let data=JSON.parse(localStorage.getItem("customNotification"));
+if(data){
+if(Date.now()<data.expire){
+document.getElementById("customBox").innerText=data.message;
+}else{
+localStorage.removeItem("customNotification");
+document.getElementById("customBox").innerText="";
+}
+}
+},1000);
+
+/* ===== COLOR CHANGE REFLECT ===== */
+function applyColor(){
+let color=localStorage.getItem("textColor")||"white";
+document.getElementById("subjectBig").style.color=color;
+}
+setInterval(applyColor,1000);
+
+/* ===== AUTO WALLPAPER 15 MIN ===== */
 function changeWallpaper(){
-document.getElementById("tabMode").style.backgroundImage =
-"url('https://source.unsplash.com/1600x900/?nature,study&"+Date.now()+"')";
+const url="https://source.unsplash.com/1600x900/?study,night&"+Date.now();
+document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
 }
 changeWallpaper();
 setInterval(changeWallpaper,900000);
 
-/* REAL SHEET GRAPH */
-fetch(scriptURL+"?action=sheet")
-.then(res=>res.json())
-.then(data=>{
-
-if(!Array.isArray(data)){return;}
-
-let labels=data.map(r=>r[0]);
-let values=data.map(r=>parseFloat(r[1])||0);
-
-new Chart(document.getElementById("chart"),{
-type:"bar",
-data:{
-labels:labels,
-datasets:[{
-label:"Study Hours",
-data:values,
-backgroundColor:"rgba(0,150,255,0.6)"
-}]
-},
-options:{
-responsive:true,
-plugins:{legend:{display:false}}
-}
-});
-
-})
-.catch(err=>{
-console.log("Graph error:",err);
-});
-
-/* ROUTINE */
+/* ===== ROUTINE ===== */
 let routine=[];
 try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
 
@@ -177,7 +160,6 @@ let studyTimer;
 setInterval(checkSchedule,1000);
 
 function checkSchedule(){
-
 let now=new Date();
 
 routine.forEach((item,index)=>{
@@ -195,11 +177,10 @@ preWarning(index,item);
 }
 
 });
-
 }
 
+/* ===== PRE WARNING ===== */
 function preWarning(index,item){
-
 activeIndex=index;
 
 document.getElementById("subjectBig").innerText="Upcoming: "+item.subject;
@@ -218,9 +199,9 @@ subject:item.subject,
 message:"Starting in 10 Minutes"
 })
 });
-
 }
 
+/* ===== BUTTON ACTION ===== */
 function startNow(){
 startStudy(routine[activeIndex]);
 }
@@ -230,25 +211,24 @@ startStudy(routine[activeIndex]);
 }
 
 function cancelNow(){
+clearInterval(studyTimer);
 document.getElementById("subjectBig").innerText="CANCELLED";
 document.getElementById("subjectBig").className="red";
 document.getElementById("remainBig").innerText="";
 }
 
+/* ===== STUDY TIMER ===== */
 function startStudy(item){
-
-setWallpaperBySubject(item.subject);
-
 let seconds=item.duration*60;
 
 studyTimer=setInterval(()=>{
-
 seconds--;
 
 let m=Math.floor(seconds/60);
 let s=seconds%60;
 
 document.getElementById("subjectBig").innerText=item.subject;
+document.getElementById("subjectBig").className="";
 document.getElementById("remainBig").innerText=
 m+":"+String(s).padStart(2,"0");
 
@@ -257,24 +237,9 @@ cancelNow();
 }
 
 },1000);
-
 }
 
-function setWallpaperBySubject(subject){
-
-let map={
-Math:"math,blackboard",
-English:"books,library",
-GS:"history,map",
-Reasoning:"logic,puzzle"
-};
-
-document.getElementById("tabMode").style.backgroundImage=
-"url('https://source.unsplash.com/1600x900/?"+
-(map[subject]||"study,nature")+
-"&"+Date.now()+"')";
-}
-
+/* ===== TAB MODE ===== */
 function enterTab(){
 document.getElementById("dashboard").style.display="none";
 document.getElementById("tabMode").style.display="block";
