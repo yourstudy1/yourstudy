@@ -2,217 +2,136 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study OS</title>
+<title>Admin Panel</title>
 
 <style>
-body{
-margin:0;
-font-family:Arial;
-background:#111;
-color:white;
-background-size:cover;
-background-position:center;
-transition:0.5s;
-text-align:center;
-}
-
-button{
-padding:6px 12px;
-margin:5px;
-border:none;
-border-radius:5px;
-cursor:pointer;
-}
-
-#subject{font-size:40px;margin-top:15vh;}
-#remaining{font-size:30px;margin-top:10px;}
-#warningBox{margin-top:20px;}
-.red{color:red;}
-.orange{color:orange;}
+body{font-family:Arial; background:#111; color:white; padding:20px;}
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+.box{border:1px solid gray; padding:10px;}
+select,input,textarea{width:100%; padding:5px; margin-top:5px;}
+button{padding:8px 15px; margin-top:10px; cursor:pointer;}
+#panel{display:none;}
 </style>
 </head>
-
 <body>
 
-<div id="clock" style="font-size:60px;margin-top:40px;"></div>
 
-<div id="subject"></div>
-<div id="remaining"></div>
+<div id="panel">
 
-<div id="warningBox" style="display:none;"></div>
+<h3>Routine Setup</h3>
+
+<div class="grid" id="slots"></div>
+
+<button onclick="saveRoutine()">Save Routine</button>
+
+<h3>Text Color</h3>
+<input type="color" id="colorPicker">
+<button onclick="saveColor()">Save Color</button>
+
+<h3>Custom Notification (15 Min)</h3>
+<textarea id="customMsg"></textarea>
+<button onclick="sendCustom()">Send 15 Min Notification</button>
+
+</div>
 
 <script>
 
 const scriptURL="https://script.google.com/macros/s/AKfycbztlolwWP31ST1fhUWjM0f2qZrBjkibbW9-NunKQSrYSD3QyekZlEAS7LtcZt2vUlgybA/exec";
+const password="king2026";
 
-/* CLOCK */
+/* LOGIN */
+function login(){
+if(document.getElementById("pass").value===password){
+document.getElementById("panel").style.display="block";
+}else{
+alert("Wrong Password");
+}
+}
+
+/* GENERATE TIME DROPDOWN */
+function generateTimeOptions(){
+let options="";
+for(let h=0;h<24;h++){
+for(let m=0;m<60;m+=15){
+let hh=String(h).padStart(2,"0");
+let mm=String(m).padStart(2,"0");
+options+=`<option>${hh}:${mm}</option>`;
+}
+}
+return options;
+}
+
+/* CREATE 6 SLOT */
+for(let i=1;i<=6;i++){
+document.getElementById("slots").innerHTML+=`
+<div class="box">
+Time:
+<select id="time${i}">${generateTimeOptions()}</select>
+Subject:
+<select id="subject${i}">
+<option>Math</option>
+<option>English</option>
+<option>GS</option>
+<option>Reasoning</option>
+<option>Mock</option>
+<option>Revision</option>
+</select>
+Duration (min):
+<input type="number" id="duration${i}" value="25">
+</div>`;
+}
+
+/* SAVE ROUTINE */
+function saveRoutine(){
+
+let routine=[];
+
+for(let i=1;i<=6;i++){
+routine.push({
+time:document.getElementById("time"+i).value,
+subject:document.getElementById("subject"+i).value,
+duration:Number(document.getElementById("duration"+i).value)
+});
+}
+
+localStorage.setItem("routine",JSON.stringify(routine));
+alert("Routine Saved");
+}
+
+/* SAVE COLOR */
+function saveColor(){
+localStorage.setItem("textColor",
+document.getElementById("colorPicker").value);
+alert("Color Saved");
+}
+function applyColor(){
+  let color=localStorage.getItem("textColor")||"white";
+  document.getElementById("subject").style.color=color;
+}
 setInterval(()=>{
-const now=new Date();
-document.getElementById("clock").innerText=now.toLocaleTimeString();
+  applyColor();
 },1000);
 
-/* WALLPAPER */
-function changeWallpaper(){
-const url="https://picsum.photos/1600/900?random="+new Date().getTime();
-document.body.style.backgroundImage="url('"+url+"')";
-}
-changeWallpaper();
-setInterval(changeWallpaper,900000);
+/* CUSTOM */
+function sendCustom(){
 
-/* ROUTINE LOAD */
-let routine=JSON.parse(localStorage.getItem("routine"))||[];
+let msg=document.getElementById("customMsg").value;
 
-let activeIndex=-1;
-let studyTimer;
-let warningTimer;
-let warningSeconds=0;
-let studySeconds=0;
+localStorage.setItem("customNotification",JSON.stringify({
+message:msg,
+expire:Date.now()+900000
+}));
 
-/* CHECK SCHEDULE */
-setInterval(checkSchedule,1000);
-
-function checkSchedule(){
-
-const now=new Date();
-const currentTime=
-String(now.getHours()).padStart(2,"0")+":"+
-String(now.getMinutes()).padStart(2,"0");
-
-routine.forEach((item,index)=>{
-
-let [h,m]=item.time.split(":");
-let startDate=new Date();
-startDate.setHours(h);
-startDate.setMinutes(m);
-startDate.setSeconds(0);
-
-let diff=Math.floor((startDate-now)/60000);
-
-/* 10 MIN BEFORE START */
-if(diff===10 && activeIndex!==index){
-showPreWarning(index,item);
-}
-
-});
-
-}
-
-/* PRE WARNING */
-function showPreWarning(index,item){
-
-activeIndex=index;
-warningSeconds=600;
-
-document.getElementById("subject").innerText=
-"Upcoming: "+item.subject;
-
-document.getElementById("subject").classList.remove("red");
-document.getElementById("subject").classList.add("orange");
-
-document.getElementById("warningBox").style.display="block";
-
-document.getElementById("warningBox").innerHTML=
-"⚠ "+item.subject+" starting in 10 min<br><br>"+
-"<button onclick='startNow()'>Start</button>"+
-"<button onclick='cancelNow()'>Cancel</button>"+
-"<button onclick='sameSubject()'>Same Subject</button>";
-
-/* TELEGRAM SEND */
 fetch(scriptURL,{
 method:"POST",
 body:new URLSearchParams({
 type:"warning",
-subject:item.subject,
-message:"Starting in 10 Minutes"
+subject:"CUSTOM",
+message:msg
 })
 });
 
-/* WARNING COUNTDOWN */
-clearInterval(warningTimer);
-
-warningTimer=setInterval(()=>{
-
-warningSeconds--;
-
-let m=Math.floor(warningSeconds/60);
-let s=warningSeconds%60;
-
-document.getElementById("remaining").innerText=
-"Warning: "+m+":"+String(s).padStart(2,"0");
-
-if(warningSeconds<=0){
-clearInterval(warningTimer);
-cancelNow();
-}
-
-},1000);
-
-}
-
-/* START BUTTON */
-function startNow(){
-
-clearInterval(warningTimer);
-document.getElementById("warningBox").style.display="none";
-
-startStudy(routine[activeIndex]);
-
-}
-
-/* SAME SUBJECT */
-function sameSubject(){
-
-clearInterval(warningTimer);
-document.getElementById("warningBox").style.display="none";
-
-startStudy(routine[activeIndex]);
-
-}
-
-/* CANCEL */
-function cancelNow(){
-
-clearInterval(warningTimer);
-clearInterval(studyTimer);
-
-document.getElementById("subject").innerText="CANCELLED";
-document.getElementById("subject").classList.remove("orange");
-document.getElementById("subject").classList.add("red");
-
-document.getElementById("remaining").innerText="";
-document.getElementById("warningBox").style.display="none";
-
-}
-
-/* STUDY TIMER */
-function startStudy(item){
-
-studySeconds=item.duration*60;
-
-document.getElementById("subject").innerText=item.subject;
-document.getElementById("subject").classList.remove("orange");
-document.getElementById("subject").classList.remove("red");
-
-clearInterval(studyTimer);
-
-studyTimer=setInterval(()=>{
-
-studySeconds--;
-
-let m=Math.floor(studySeconds/60);
-let s=studySeconds%60;
-
-document.getElementById("remaining").innerText=
-"Study: "+m+":"+String(s).padStart(2,"0");
-
-if(studySeconds<=0){
-clearInterval(studyTimer);
-cancelNow();
-}
-
-},1000);
-
+alert("Custom Notification Sent");
 }
 
 </script>
