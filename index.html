@@ -166,4 +166,125 @@ let now=new Date();
 routine.forEach((item,index)=>{
 
 let start=new Date();
-let
+let [h,m]=item.time.split(":");
+start.setHours(h);
+start.setMinutes(m);
+start.setSeconds(0);
+
+let diff=Math.floor((start-now)/60000);
+
+/* 10 MIN WARNING */
+if(diff===10 && activeIndex!==index){
+startWarning(index,item);
+}
+
+});
+}
+
+/* WARNING TIMER */
+function startWarning(index,item){
+activeIndex=index;
+let seconds=600;
+
+document.getElementById("subject").innerText="Upcoming: "+item.subject;
+
+clearInterval(warningInterval);
+
+warningInterval=setInterval(()=>{
+seconds--;
+
+let m=Math.floor(seconds/60);
+let s=seconds%60;
+
+document.getElementById("warningTimer").innerText=
+"Warning: "+m+":"+String(s).padStart(2,"0");
+
+if(seconds<=0){
+clearInterval(warningInterval);
+startStudy(item);
+}
+
+},1000);
+
+}
+
+/* STUDY TIMER */
+function startStudy(item){
+let seconds=item.duration*60;
+
+clearInterval(studyInterval);
+
+studyInterval=setInterval(()=>{
+seconds--;
+
+let m=Math.floor(seconds/60);
+let s=seconds%60;
+
+document.getElementById("subject").innerText=item.subject;
+document.getElementById("warningTimer").innerText="";
+document.getElementById("studyTimer").innerText=
+"Study Time: "+m+":"+String(s).padStart(2,"0");
+
+if(seconds<=0){
+cancelStudy();
+}
+
+},1000);
+
+}
+
+/* CANCEL */
+function cancelStudy(){
+clearInterval(warningInterval);
+clearInterval(studyInterval);
+document.getElementById("studyTimer").innerText="";
+document.getElementById("warningTimer").innerText="";
+document.getElementById("subject").innerText="CANCELLED";
+}
+
+/* NEXT SUBJECT */
+setInterval(()=>{
+if(routine.length>0){
+document.getElementById("nextSubject").innerText=
+"Next: "+routine[0].subject+" at "+routine[0].time;
+}
+},5000);
+
+/* DASHBOARD GRAPH */
+let subjectData={};
+
+routine.forEach(item=>{
+if(!subjectData[item.subject]) subjectData[item.subject]=0;
+subjectData[item.subject]+=item.duration;
+});
+
+new Chart(document.getElementById("studyChart"),{
+type:"bar",
+data:{
+labels:Object.keys(subjectData),
+datasets:[{
+data:Object.values(subjectData),
+backgroundColor:"rgba(0,150,255,0.6)"
+}]
+}
+});
+
+/* TODAY TOTAL */
+let total=0;
+routine.forEach(item=> total+=item.duration);
+document.getElementById("todayTotal").innerText=
+"Today's Planned Study: "+total+" minutes";
+
+/* MODE SWITCH */
+function enterTab(){
+document.getElementById("dashboard").style.display="none";
+document.getElementById("tabMode").style.display="block";
+}
+function exitTab(){
+document.getElementById("dashboard").style.display="block";
+document.getElementById("tabMode").style.display="none";
+}
+
+</script>
+</body>
+</html>
