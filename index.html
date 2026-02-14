@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study OS</title>
+<title>Smart Study Ultimate</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
@@ -11,21 +12,15 @@ margin:0;
 font-family:Arial;
 background:#111;
 color:white;
-overflow:hidden;
-transition:0.5s;
-}
-
-/* NORMAL DASHBOARD */
-#dashboard{
-padding:20px;
+transition:0.4s;
 }
 
 .card{
-background:rgba(255,255,255,0.05);
+background:rgba(255,255,255,0.08);
 backdrop-filter:blur(10px);
 padding:20px;
 border-radius:15px;
-margin-bottom:15px;
+margin:15px;
 }
 
 button{
@@ -37,164 +32,117 @@ background:#444;
 color:white;
 }
 
-button:hover{
-background:#666;
-}
-
-/* TAB MODE */
 #tabMode{
 display:none;
 height:100vh;
-width:100vw;
-position:relative;
 text-align:center;
 background-size:cover;
 background-position:center;
 }
 
-#clock{
-font-size:70px;
-margin-top:40px;
-}
-
-#subject{
-font-size:45px;
-margin-top:15vh;
-}
-
-#remaining{
-font-size:30px;
-margin-top:10px;
-}
-
-#warningBox{
-margin-top:20px;
-}
-
+#clockBig{font-size:70px;margin-top:40px;}
+#subjectBig{font-size:45px;margin-top:15vh;}
+#remainBig{font-size:30px;margin-top:10px;}
 .red{color:red;}
 .orange{color:orange;}
-
-#exitBtn{
-position:absolute;
-bottom:15px;
-right:20px;
-font-size:12px;
-background:rgba(0,0,0,0.5);
-}
 </style>
 </head>
 <body>
 
-<!-- DASHBOARD -->
 <div id="dashboard">
+
 <h2>Smart Study Dashboard</h2>
 
-<div class="card">
-<h3>Live Time</h3>
-<div id="normalClock"></div>
-</div>
-
-<div class="card">
-<h3>Status</h3>
-<div id="status">Idle</div>
-</div>
-
-<button onclick="enableTab()">Enter Tab Mode</button>
+<button onclick="enterTab()">Tab Mode</button>
 <a href="admin.html"><button>Admin</button></a>
 
+<div class="card">
+<div id="liveTime"></div>
+<div id="liveDate"></div>
 </div>
 
-<!-- TAB MODE -->
+<div class="card">
+<canvas id="chart"></canvas>
+</div>
+
+</div>
+
 <div id="tabMode">
-
-<div id="clock"></div>
-
-<div id="subject"></div>
-<div id="remaining"></div>
-
+<div id="clockBig"></div>
+<div id="subjectBig"></div>
+<div id="remainBig"></div>
 <div id="warningBox"></div>
-
-<button id="exitBtn" onclick="disableTab()">EXIT</button>
-
+<button onclick="exitTab()">EXIT</button>
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbxq49CFhIWiKHxh69xPBczmBuiMcjw5YIoYuEq6lwZYybsAZWuG2Q9q8guseFWTa2Wd0A/exec";
-
-/* WALLPAPER */
-function changeWallpaper(){
-const url="https://picsum.photos/1600/900?random="+Date.now();
-document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
-}
-changeWallpaper();
-setInterval(changeWallpaper,900000);
+const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
 
 /* CLOCK */
 setInterval(()=>{
 let now=new Date();
-document.getElementById("normalClock").innerText=now.toLocaleTimeString();
-document.getElementById("clock").innerText=now.toLocaleTimeString();
+document.getElementById("liveTime").innerText=now.toLocaleTimeString();
+document.getElementById("liveDate").innerText=now.toDateString();
+document.getElementById("clockBig").innerText=now.toLocaleTimeString();
 },1000);
 
-/* TAB MODE */
-function enableTab(){
-document.getElementById("dashboard").style.display="none";
-document.getElementById("tabMode").style.display="block";
+/* SHEET GRAPH */
+fetch(scriptURL+"?action=sheet")
+.then(res=>res.json())
+.then(data=>{
+
+let labels=data.map(r=>r[0]);
+let values=data.map(r=>r[1]);
+
+new Chart(document.getElementById("chart"),{
+type:"bar",
+data:{
+labels:labels,
+datasets:[{
+label:"Study Hours",
+data:values,
+backgroundColor:"rgba(0,123,255,0.6)"
+}]
 }
-function disableTab(){
-document.getElementById("dashboard").style.display="block";
-document.getElementById("tabMode").style.display="none";
-}
+});
+
+});
 
 /* ROUTINE */
 let routine=[];
-try{
-routine=JSON.parse(localStorage.getItem("routine"))||[];
-}catch(e){
-routine=[];
-}
+try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
 
 let activeIndex=-1;
-let warningTimer;
-let studyTimer;
-let warningSeconds=0;
-let studySeconds=0;
+let warningTimer, studyTimer;
 
-/* CHECK SCHEDULE */
 setInterval(checkSchedule,1000);
 
 function checkSchedule(){
-
 let now=new Date();
-
 routine.forEach((item,index)=>{
 
-let [h,m]=item.time.split(":");
 let start=new Date();
+let [h,m]=item.time.split(":");
 start.setHours(h);
 start.setMinutes(m);
 start.setSeconds(0);
 
 let diff=Math.floor((start-now)/60000);
 
-/* 10 MIN BEFORE */
 if(diff===10 && activeIndex!==index){
 preWarning(index,item);
 }
 
 });
-
 }
 
-/* PRE WARNING */
 function preWarning(index,item){
 
 activeIndex=index;
-warningSeconds=600;
 
-document.getElementById("subject").innerText="Upcoming: "+item.subject;
-document.getElementById("subject").className="orange";
+document.getElementById("subjectBig").innerText="Upcoming: "+item.subject;
+document.getElementById("subjectBig").className="orange";
 
 document.getElementById("warningBox").innerHTML=
 "<button onclick='startNow()'>Start</button>"+
@@ -210,72 +158,69 @@ message:"Starting in 10 Minutes"
 })
 });
 
-clearInterval(warningTimer);
-warningTimer=setInterval(()=>{
-
-warningSeconds--;
-
-let m=Math.floor(warningSeconds/60);
-let s=warningSeconds%60;
-
-document.getElementById("remaining").innerText=
-"Warning: "+m+":"+String(s).padStart(2,"0");
-
-if(warningSeconds<=0){
-cancelNow();
 }
 
-},1000);
-
-}
-
-/* START */
 function startNow(){
-clearInterval(warningTimer);
 startStudy(routine[activeIndex]);
 }
 
-/* SAME */
 function sameSubject(){
-clearInterval(warningTimer);
 startStudy(routine[activeIndex]);
 }
 
-/* CANCEL */
 function cancelNow(){
-clearInterval(warningTimer);
-clearInterval(studyTimer);
-document.getElementById("subject").innerText="CANCELLED";
-document.getElementById("subject").className="red";
-document.getElementById("remaining").innerText="";
-document.getElementById("warningBox").innerHTML="";
+document.getElementById("subjectBig").innerText="CANCELLED";
+document.getElementById("subjectBig").className="red";
+document.getElementById("remainBig").innerText="";
 }
 
-/* STUDY */
 function startStudy(item){
 
-studySeconds=item.duration*60;
-document.getElementById("subject").innerText=item.subject;
-document.getElementById("subject").className="";
+setWallpaper(item.subject);
 
-clearInterval(studyTimer);
+let seconds=item.duration*60;
 
 studyTimer=setInterval(()=>{
 
-studySeconds--;
+seconds--;
 
-let m=Math.floor(studySeconds/60);
-let s=studySeconds%60;
+let m=Math.floor(seconds/60);
+let s=seconds%60;
 
-document.getElementById("remaining").innerText=
-"Study: "+m+":"+String(s).padStart(2,"0");
+document.getElementById("subjectBig").innerText=item.subject;
+document.getElementById("remainBig").innerText=
+m+":"+String(s).padStart(2,"0");
 
-if(studySeconds<=0){
+if(seconds<=0){
 cancelNow();
 }
 
 },1000);
 
+}
+
+/* SUBJECT WALLPAPER */
+function setWallpaper(subject){
+
+let images={
+Math:"https://picsum.photos/1600/900?math",
+English:"https://picsum.photos/1600/900?english",
+GS:"https://picsum.photos/1600/900?history",
+Reasoning:"https://picsum.photos/1600/900?logic"
+};
+
+document.getElementById("tabMode").style.backgroundImage=
+"url('"+(images[subject]||"https://picsum.photos/1600/900") +"')";
+}
+
+function enterTab(){
+document.getElementById("dashboard").style.display="none";
+document.getElementById("tabMode").style.display="block";
+}
+
+function exitTab(){
+document.getElementById("dashboard").style.display="block";
+document.getElementById("tabMode").style.display="none";
 }
 
 </script>
