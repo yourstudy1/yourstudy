@@ -107,6 +107,13 @@ localStorage.setItem("textColor",
 document.getElementById("colorPicker").value);
 alert("Color Saved");
 }
+function applyColor(){
+  let color=localStorage.getItem("textColor")||"white";
+  document.getElementById("subject").style.color=color;
+}
+setInterval(()=>{
+  applyColor();
+},1000);
 
 /* CUSTOM */
 function sendCustom(){
