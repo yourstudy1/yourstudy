@@ -3,81 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study Ultimate</title>
+<title>Smart Study ULTIMATE</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
 margin:0;
-font-family:Arial;
-background:#111;
+font-family:'Segoe UI',sans-serif;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 color:white;
+overflow-x:hidden;
 transition:0.4s;
 }
 
+/* Glass Card */
 .card{
 background:rgba(255,255,255,0.08);
-backdrop-filter:blur(10px);
-padding:20px;
-border-radius:15px;
-margin:15px;
+backdrop-filter:blur(15px);
+border-radius:20px;
+padding:25px;
+margin:20px;
+box-shadow:0 0 30px rgba(0,0,0,0.4);
 }
 
+/* Buttons */
 button{
-padding:8px 15px;
+padding:8px 18px;
 border:none;
-border-radius:8px;
+border-radius:10px;
 cursor:pointer;
-background:#444;
+background:#1f1f1f;
 color:white;
+transition:0.3s;
 }
+button:hover{
+background:#444;
+}
+
+h2{margin-left:20px;margin-top:20px;}
+
+#dashboard{padding-bottom:50px;}
+
+.big{font-size:26px;font-weight:bold;}
+.small{color:#bbb;}
 
 #tabMode{
 display:none;
 height:100vh;
-text-align:center;
 background-size:cover;
 background-position:center;
+text-align:center;
+position:relative;
+animation:fadeIn 0.6s ease;
 }
 
-#clockBig{font-size:70px;margin-top:40px;}
-#subjectBig{font-size:45px;margin-top:15vh;}
-#remainBig{font-size:30px;margin-top:10px;}
-.red{color:red;}
+@keyframes fadeIn{
+from{opacity:0;}
+to{opacity:1;}
+}
+
+#clockBig{font-size:80px;margin-top:40px;}
+#subjectBig{font-size:50px;margin-top:18vh;}
+#remainBig{font-size:32px;margin-top:10px;}
 .orange{color:orange;}
+.red{color:red;}
+
+#exitBtn{
+position:absolute;
+bottom:20px;
+right:25px;
+background:rgba(0,0,0,0.6);
+font-size:12px;
+}
+
+@media(max-width:768px){
+#clockBig{font-size:45px;}
+#subjectBig{font-size:28px;}
+}
 </style>
 </head>
-<body>
 
-<div id="dashboard">
+<body>
 
 <h2>Smart Study Dashboard</h2>
 
-<button onclick="enterTab()">Tab Mode</button>
-<a href="admin.html"><button>Admin</button></a>
+<div id="dashboard">
 
 <div class="card">
-<div id="liveTime"></div>
-<div id="liveDate"></div>
+<div class="big" id="liveTime"></div>
+<div class="small" id="liveDate"></div>
 </div>
 
 <div class="card">
+<div class="big">Study Analytics</div>
 <canvas id="chart"></canvas>
 </div>
 
+<div style="margin-left:20px;">
+<button onclick="enterTab()">Enter Tab Mode</button>
+<a href="admin.html"><button>Admin</button></a>
 </div>
 
+</div>
+
+<!-- TAB MODE -->
 <div id="tabMode">
 <div id="clockBig"></div>
 <div id="subjectBig"></div>
 <div id="remainBig"></div>
 <div id="warningBox"></div>
-<button onclick="exitTab()">EXIT</button>
+<button id="exitBtn" onclick="exitTab()">EXIT</button>
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
+const scriptURL="YOUR_WEB_APP_URL";
 
 /* CLOCK */
 setInterval(()=>{
@@ -87,13 +128,23 @@ document.getElementById("liveDate").innerText=now.toDateString();
 document.getElementById("clockBig").innerText=now.toLocaleTimeString();
 },1000);
 
-/* SHEET GRAPH */
+/* AUTO WALLPAPER (STABLE SOURCE) */
+function changeWallpaper(){
+document.getElementById("tabMode").style.backgroundImage =
+"url('https://source.unsplash.com/1600x900/?nature,study&"+Date.now()+"')";
+}
+changeWallpaper();
+setInterval(changeWallpaper,900000);
+
+/* REAL SHEET GRAPH */
 fetch(scriptURL+"?action=sheet")
 .then(res=>res.json())
 .then(data=>{
 
+if(!Array.isArray(data)){return;}
+
 let labels=data.map(r=>r[0]);
-let values=data.map(r=>r[1]);
+let values=data.map(r=>parseFloat(r[1])||0);
 
 new Chart(document.getElementById("chart"),{
 type:"bar",
@@ -102,11 +153,18 @@ labels:labels,
 datasets:[{
 label:"Study Hours",
 data:values,
-backgroundColor:"rgba(0,123,255,0.6)"
+backgroundColor:"rgba(0,150,255,0.6)"
 }]
+},
+options:{
+responsive:true,
+plugins:{legend:{display:false}}
 }
 });
 
+})
+.catch(err=>{
+console.log("Graph error:",err);
 });
 
 /* ROUTINE */
@@ -114,12 +172,14 @@ let routine=[];
 try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
 
 let activeIndex=-1;
-let warningTimer, studyTimer;
+let studyTimer;
 
 setInterval(checkSchedule,1000);
 
 function checkSchedule(){
+
 let now=new Date();
+
 routine.forEach((item,index)=>{
 
 let start=new Date();
@@ -135,6 +195,7 @@ preWarning(index,item);
 }
 
 });
+
 }
 
 function preWarning(index,item){
@@ -176,7 +237,7 @@ document.getElementById("remainBig").innerText="";
 
 function startStudy(item){
 
-setWallpaper(item.subject);
+setWallpaperBySubject(item.subject);
 
 let seconds=item.duration*60;
 
@@ -199,18 +260,19 @@ cancelNow();
 
 }
 
-/* SUBJECT WALLPAPER */
-function setWallpaper(subject){
+function setWallpaperBySubject(subject){
 
-let images={
-Math:"https://picsum.photos/1600/900?math",
-English:"https://picsum.photos/1600/900?english",
-GS:"https://picsum.photos/1600/900?history",
-Reasoning:"https://picsum.photos/1600/900?logic"
+let map={
+Math:"math,blackboard",
+English:"books,library",
+GS:"history,map",
+Reasoning:"logic,puzzle"
 };
 
 document.getElementById("tabMode").style.backgroundImage=
-"url('"+(images[subject]||"https://picsum.photos/1600/900") +"')";
+"url('https://source.unsplash.com/1600x900/?"+
+(map[subject]||"study,nature")+
+"&"+Date.now()+"')";
 }
 
 function enterTab(){
