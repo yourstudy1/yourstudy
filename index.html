@@ -143,12 +143,25 @@ document.getElementById("subjectBig").style.color=color;
 setInterval(applyColor,1000);
 
 /* ===== AUTO WALLPAPER 15 MIN ===== */
+/* ===== GOOGLE AUTO WALLPAPER ===== */
+
 function changeWallpaper(){
-const url="https://source.unsplash.com/1600x900/?study,night&"+Date.now();
-document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
+
+  const url = "https://picsum.photos/1600/900?random=" + Date.now();
+
+  const tab = document.getElementById("tabMode");
+
+  tab.style.backgroundImage = "url('" + url + "')";
+  tab.style.backgroundSize = "cover";
+  tab.style.backgroundPosition = "center";
+
 }
+
+/* First Load */
 changeWallpaper();
-setInterval(changeWallpaper,900000);
+
+/* Change Every 15 Min */
+setInterval(changeWallpaper, 900000);
 
 /* ===== ROUTINE ===== */
 let routine=[];
