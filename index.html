@@ -14,6 +14,7 @@ color:white;
 background-size:cover;
 background-position:center;
 transition:0.5s;
+text-align:center;
 }
 
 button{
@@ -24,56 +25,32 @@ border-radius:5px;
 cursor:pointer;
 }
 
-#tabView{
-display:none;
-height:100vh;
-text-align:center;
-position:relative;
-}
-
-#customBox{
-font-size:28px;
-margin-bottom:10px;
-}
-
-.red{ color:red; }
+#subject{font-size:40px;margin-top:15vh;}
+#remaining{font-size:30px;margin-top:10px;}
+#warningBox{margin-top:20px;}
+.red{color:red;}
+.orange{color:orange;}
 </style>
 </head>
 
 <body>
 
-<h2>
-Dashboard
-<button onclick="enableTab()">Tab Mode</button>
-<a href="admin.html"><button>Admin</button></a>
-</h2>
+<div id="clock" style="font-size:60px;margin-top:40px;"></div>
 
-<!-- TAB MODE -->
-<div id="tabView">
+<div id="subject"></div>
+<div id="remaining"></div>
 
-<div style="margin-top:12vh;">
-
-<div id="clock" style="font-size:70px;"></div>
-
-<div id="customBox"></div>
-
-<div id="subject" style="font-size:40px;"></div>
-<div id="remaining" style="font-size:32px;"></div>
-
-<div id="warningBox" style="display:none; margin-top:20px;"></div>
-
-</div>
-
-<button onclick="exitTab()" 
-style="position:absolute; bottom:10px; right:15px; font-size:12px;">
-EXIT
-</button>
-
-</div>
+<div id="warningBox" style="display:none;"></div>
 
 <script>
 
 const scriptURL="https://script.google.com/macros/s/AKfycbztlolwWP31ST1fhUWjM0f2qZrBjkibbW9-NunKQSrYSD3QyekZlEAS7LtcZt2vUlgybA/exec";
+
+/* CLOCK */
+setInterval(()=>{
+const now=new Date();
+document.getElementById("clock").innerText=now.toLocaleTimeString();
+},1000);
 
 /* WALLPAPER */
 function changeWallpaper(){
@@ -83,33 +60,19 @@ document.body.style.backgroundImage="url('"+url+"')";
 changeWallpaper();
 setInterval(changeWallpaper,900000);
 
-/* TAB MODE */
-function enableTab(){
-document.getElementById("tabView").style.display="block";
-}
-function exitTab(){
-document.getElementById("tabView").style.display="none";
-}
-
-/* CLOCK */
-setInterval(()=>{
-const now=new Date();
-document.getElementById("clock").innerText=now.toLocaleTimeString();
-},1000);
-
-/* LOAD ROUTINE */
+/* ROUTINE LOAD */
 let routine=JSON.parse(localStorage.getItem("routine"))||[];
-let color=localStorage.getItem("textColor")||"white";
-document.getElementById("subject").style.color=color;
 
-let currentIndex=-1;
-let timer;
-let remainingSeconds=0;
-let warning10=false;
+let activeIndex=-1;
+let studyTimer;
+let warningTimer;
+let warningSeconds=0;
+let studySeconds=0;
 
-setInterval(checkRoutine,1000);
+/* CHECK SCHEDULE */
+setInterval(checkSchedule,1000);
 
-function checkRoutine(){
+function checkSchedule(){
 
 const now=new Date();
 const currentTime=
@@ -117,94 +80,140 @@ String(now.getHours()).padStart(2,"0")+":"+
 String(now.getMinutes()).padStart(2,"0");
 
 routine.forEach((item,index)=>{
-if(item.time===currentTime && currentIndex!==index){
-startSubject(index,item.subject,item.duration);
+
+let [h,m]=item.time.split(":");
+let startDate=new Date();
+startDate.setHours(h);
+startDate.setMinutes(m);
+startDate.setSeconds(0);
+
+let diff=Math.floor((startDate-now)/60000);
+
+/* 10 MIN BEFORE START */
+if(diff===10 && activeIndex!==index){
+showPreWarning(index,item);
 }
+
 });
+
 }
 
-function startSubject(index,subject,duration){
+/* PRE WARNING */
+function showPreWarning(index,item){
 
-currentIndex=index;
-warning10=false;
+activeIndex=index;
+warningSeconds=600;
 
-document.getElementById("subject").innerText=subject;
-remainingSeconds=duration*60;
+document.getElementById("subject").innerText=
+"Upcoming: "+item.subject;
 
-clearInterval(timer);
-
-timer=setInterval(()=>{
-
-remainingSeconds--;
-
-let m=Math.floor(remainingSeconds/60);
-let s=remainingSeconds%60;
-
-document.getElementById("remaining").innerText=
-m+":"+String(s).padStart(2,"0");
-
-if(remainingSeconds===600 && !warning10){
-warning10=true;
-showWarning(subject,"10 Minutes Left");
-}
-
-if(remainingSeconds<=0){
-clearInterval(timer);
-showWarning(subject,"Time Over");
-}
-
-},1000);
-}
-
-function showWarning(subject,msg){
+document.getElementById("subject").classList.remove("red");
+document.getElementById("subject").classList.add("orange");
 
 document.getElementById("warningBox").style.display="block";
-document.getElementById("warningBox").innerHTML=
-"⚠ "+msg+"<br><br>"+
-"<button onclick='extraTime()'>3 Attempt</button>"+
-"<button onclick='finalTime()'>Final</button>"+
-"<button onclick='cancelStudy()'>Cancel</button>";
 
+document.getElementById("warningBox").innerHTML=
+"⚠ "+item.subject+" starting in 10 min<br><br>"+
+"<button onclick='startNow()'>Start</button>"+
+"<button onclick='cancelNow()'>Cancel</button>"+
+"<button onclick='sameSubject()'>Same Subject</button>";
+
+/* TELEGRAM SEND */
 fetch(scriptURL,{
 method:"POST",
 body:new URLSearchParams({
 type:"warning",
-subject:subject,
-message:msg
+subject:item.subject,
+message:"Starting in 10 Minutes"
 })
 });
+
+/* WARNING COUNTDOWN */
+clearInterval(warningTimer);
+
+warningTimer=setInterval(()=>{
+
+warningSeconds--;
+
+let m=Math.floor(warningSeconds/60);
+let s=warningSeconds%60;
+
+document.getElementById("remaining").innerText=
+"Warning: "+m+":"+String(s).padStart(2,"0");
+
+if(warningSeconds<=0){
+clearInterval(warningTimer);
+cancelNow();
 }
 
-function extraTime(){
-remainingSeconds=300;
-document.getElementById("warningBox").style.display="none";
-}
-
-function finalTime(){
-remainingSeconds=60;
-document.getElementById("warningBox").style.display="none";
-}
-
-function cancelStudy(){
-clearInterval(timer);
-document.getElementById("subject").innerText="CANCELLED";
-document.getElementById("remaining").classList.add("red");
-document.getElementById("warningBox").style.display="none";
-}
-
-/* CUSTOM NOTIFICATION AUTO DELETE */
-setInterval(()=>{
-let data=JSON.parse(localStorage.getItem("customNotification"));
-
-if(data){
-if(Date.now()<data.expire){
-document.getElementById("customBox").innerText=data.message;
-}else{
-localStorage.removeItem("customNotification");
-document.getElementById("customBox").innerText="";
-}
-}
 },1000);
+
+}
+
+/* START BUTTON */
+function startNow(){
+
+clearInterval(warningTimer);
+document.getElementById("warningBox").style.display="none";
+
+startStudy(routine[activeIndex]);
+
+}
+
+/* SAME SUBJECT */
+function sameSubject(){
+
+clearInterval(warningTimer);
+document.getElementById("warningBox").style.display="none";
+
+startStudy(routine[activeIndex]);
+
+}
+
+/* CANCEL */
+function cancelNow(){
+
+clearInterval(warningTimer);
+clearInterval(studyTimer);
+
+document.getElementById("subject").innerText="CANCELLED";
+document.getElementById("subject").classList.remove("orange");
+document.getElementById("subject").classList.add("red");
+
+document.getElementById("remaining").innerText="";
+document.getElementById("warningBox").style.display="none";
+
+}
+
+/* STUDY TIMER */
+function startStudy(item){
+
+studySeconds=item.duration*60;
+
+document.getElementById("subject").innerText=item.subject;
+document.getElementById("subject").classList.remove("orange");
+document.getElementById("subject").classList.remove("red");
+
+clearInterval(studyTimer);
+
+studyTimer=setInterval(()=>{
+
+studySeconds--;
+
+let m=Math.floor(studySeconds/60);
+let s=studySeconds%60;
+
+document.getElementById("remaining").innerText=
+"Study: "+m+":"+String(s).padStart(2,"0");
+
+if(studySeconds<=0){
+clearInterval(studyTimer);
+cancelNow();
+}
+
+},1000);
+
+}
 
 </script>
 
