@@ -1,192 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study Dashboard</title>
+<title>Smart Study OS</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
+:root{
+  --bg:#111;
+  --card:#222;
+  --text:#fff;
+}
+.light{
+  --bg:#f5f5f5;
+  --card:#fff;
+  --text:#000;
+}
 body{
-  font-family:Arial;
   margin:0;
-  color:white;
+  font-family:Arial;
+  background:var(--bg);
+  color:var(--text);
+  transition:0.3s;
+}
+.container{
+  padding:15px;
+}
+.card{
+  background:var(--card);
+  padding:15px;
+  margin:10px 0;
+  border-radius:10px;
+}
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+th,td{
+  padding:8px;
   text-align:center;
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  transition: background-image 1s ease-in-out;
+  border-bottom:1px solid gray;
 }
-
-.overlay{
-  background:rgba(0,0,0,0.6);
-  min-height:100vh;
-  padding:20px;
-}
-
 button{
-  padding:10px 20px;
+  padding:8px 12px;
   margin:5px;
+  border:none;
+  border-radius:5px;
   cursor:pointer;
 }
-
-input{
-  padding:8px;
-  width:80px;
+.toggle{
+  float:right;
 }
-
-.hidden{
-  display:none;
+@media(max-width:600px){
+  table{font-size:12px;}
 }
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<div class="overlay">
+<h2>Smart Study Dashboard 
+<button class="toggle" onclick="toggleTheme()">🌙</button>
+</h2>
 
-<div id="loginPage">
-  <h2>Login</h2>
-  <input type="text" id="username" placeholder="Enter Name"><br><br>
-  <button onclick="login()">Login</button>
+<div class="card">
+<canvas id="chart"></canvas>
 </div>
 
-<div id="dashboard" class="hidden">
-
-  <h2>Smart Study Panel</h2>
-
-  <h3>Add Study Time</h3>
-  <select id="subject">
-    <option>Math</option>
-    <option>English</option>
-    <option>GS</option>
-    <option>Reasoning</option>
-  </select>
-  <input type="number" id="minutes" placeholder="Min">
-  <button onclick="addStudy()">Add</button>
-
-  <h3>Mock</h3>
-  <input type="number" id="mockMin" placeholder="Min">
-  <button onclick="addMock()">Start Mock</button>
-
-  <h3>Sleep / Rest</h3>
-  <input type="number" id="sleepMin" placeholder="Min">
-  <button onclick="addSleep()">Add Rest</button>
-
-  <h3>Office</h3>
-  <button onclick="officeIn()">Office In</button>
-  <button onclick="officeOut()">Office Out</button>
-
-  <br><br>
-  <button onclick="logout()">Logout</button>
-
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Math</th>
+<th>Eng</th>
+<th>GS</th>
+<th>Reason</th>
+<th>Mock</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
 </div>
+
+<a href="admin.html">
+<button>Admin Panel</button>
+</a>
 
 </div>
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4XPpldIrnPGe93znf4qEAXfaiWU1llnIjou07SoVYx9R6Mc9b0VBHE052Tr7IuaHCeA/exec  ";
+const scriptURL="https://script.google.com/macros/s/AKfycbxxYEF5KmlrjopVmsgWDfAW0dAcKrDSVkIWmHQQWORJExgJ33eEgQ4HnzjAv2IytI7iJg/exec";
+let chart;
 
-/* ================= LOGIN ================= */
-
-let currentUser = localStorage.getItem("user");
-
-if(currentUser){
-  showDashboard();
+function toggleTheme(){
+  document.body.classList.toggle("light");
 }
 
-function login(){
-  const name = document.getElementById("username").value;
-  if(name){
-    localStorage.setItem("user", name);
-    currentUser = name;
-    showDashboard();
-  }
+function loadData(){
+fetch(scriptURL)
+.then(res=>res.json())
+.then(data=>{
+
+let body="";
+let totals=[];
+let labels=[];
+
+for(let i=1;i<data.length;i++){
+let total=
+Number(data[i][1])+
+Number(data[i][2])+
+Number(data[i][3])+
+Number(data[i][4])+
+Number(data[i][5]);
+
+labels.push(new Date(data[i][0]).toLocaleDateString());
+totals.push(total);
+
+body+=`<tr>
+<td>${new Date(data[i][0]).toLocaleDateString()}</td>
+<td>${data[i][1]}</td>
+<td>${data[i][2]}</td>
+<td>${data[i][3]}</td>
+<td>${data[i][4]}</td>
+<td>${data[i][5]}</td>
+<td>${total}</td>
+</tr>`;
 }
 
-function logout(){
-  localStorage.removeItem("user");
-  location.reload();
+document.getElementById("tableBody").innerHTML=body;
+
+if(chart) chart.destroy();
+
+chart=new Chart(document.getElementById("chart"),{
+type:"line",
+data:{
+labels:labels,
+datasets:[{
+label:"Total Study",
+data:totals,
+borderWidth:2
+}]
+}
+});
+
+});
 }
 
-function showDashboard(){
-  document.getElementById("loginPage").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-}
-
-/* ================= SEND DATA ================= */
-
-function sendData(text){
-  fetch(SCRIPT_URL,{
-    method:"POST",
-    body:JSON.stringify({
-      message:{
-        chat:{id:123},
-        text:text,
-        from:{username:currentUser}
-      }
-    })
-  });
-}
-
-function addStudy(){
-  const subject = document.getElementById("subject").value.toLowerCase();
-  const min = document.getElementById("minutes").value;
-  if(min){
-    sendData(subject + min);
-    alert("Added");
-  }
-}
-
-function addMock(){
-  const min = document.getElementById("mockMin").value;
-  if(min){
-    sendData("mock" + min);
-    alert("Mock Added");
-  }
-}
-
-function addSleep(){
-  const min = document.getElementById("sleepMin").value;
-  if(min){
-    sendData("sleep" + min);
-    alert("Rest Added");
-  }
-}
-
-function officeIn(){
-  sendData("office in");
-  alert("Office Started");
-}
-
-function officeOut(){
-  sendData("office out");
-  alert("Office Ended");
-}
-
-/* ================= AUTO WALLPAPER ================= */
-
-const keywords = [
-  "study desk",
-  "minimal dark",
-  "galaxy space",
-  "mountain night",
-  "productivity setup",
-  "abstract dark wallpaper"
-];
-
-function changeWallpaper(){
-  const random = keywords[Math.floor(Math.random()*keywords.length)];
-  const url = `https://source.unsplash.com/1920x1080/?${random}&${new Date().getTime()}`;
-  document.body.style.backgroundImage = `url('${url}')`;
-}
-
-// First load
-changeWallpaper();
-
-// Change every 15 minutes
-setInterval(changeWallpaper, 900000);
+loadData();
 
 </script>
-
 </body>
 </html>
