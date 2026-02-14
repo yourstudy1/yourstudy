@@ -8,68 +8,59 @@
 
 <style>
 :root{
-  --bg:#111;
-  --card:#222;
+  --card:rgba(0,0,0,0.7);
   --text:#fff;
 }
 .light{
-  --bg:#f5f5f5;
-  --card:#fff;
+  --card:rgba(255,255,255,0.9);
   --text:#000;
 }
 body{
   margin:0;
   font-family:Arial;
-  background:var(--bg);
   color:var(--text);
-  transition:0.3s;
+  background-size:cover;
+  background-position:center;
+  transition:background-image 1s ease-in-out;
 }
-.container{
-  padding:15px;
-}
-.card{
+.overlay{
+  min-height:100vh;
   background:var(--card);
   padding:15px;
-  margin:10px 0;
-  border-radius:10px;
+  transition:0.3s;
 }
 table{
   width:100%;
   border-collapse:collapse;
+  font-size:14px;
 }
 th,td{
-  padding:8px;
+  padding:6px;
   text-align:center;
   border-bottom:1px solid gray;
 }
 button{
-  padding:8px 12px;
+  padding:6px 10px;
   margin:5px;
-  border:none;
-  border-radius:5px;
   cursor:pointer;
 }
-.toggle{
-  float:right;
-}
 @media(max-width:600px){
-  table{font-size:12px;}
+  table{font-size:11px;}
 }
 </style>
 </head>
 
 <body>
-<div class="container">
 
-<h2>Smart Study Dashboard 
-<button class="toggle" onclick="toggleTheme()">🌙</button>
+<div class="overlay">
+
+<h2>
+Smart Study Dashboard
+<button onclick="toggleTheme()">Toggle Theme</button>
 </h2>
 
-<div class="card">
 <canvas id="chart"></canvas>
-</div>
 
-<div class="card">
 <table>
 <thead>
 <tr>
@@ -84,23 +75,29 @@ button{
 </thead>
 <tbody id="tableBody"></tbody>
 </table>
-</div>
 
-<a href="admin.html">
-<button>Admin Panel</button>
-</a>
+<a href="admin.html"><button>Admin Panel</button></a>
 
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbxxYEF5KmlrjopVmsgWDfAW0dAcKrDSVkIWmHQQWORJExgJ33eEgQ4HnzjAv2IytI7iJg/exec";
+const scriptURL="https://script.google.com/macros/s/AKfycbyZTo_JXD9CVeHXr5takTUJybmaA7QP9-_5ViEcYHn4e8O5R_7Xbz8CfACTfVV_GQMq/exec";
 let chart;
 
 function toggleTheme(){
   document.body.classList.toggle("light");
 }
 
+/* 🔥 WALLPAPER SYSTEM */
+function changeWallpaper(){
+  const url="https://source.unsplash.com/1600x900/?study,library,books&"+new Date().getTime();
+  document.body.style.backgroundImage="url('"+url+"')";
+}
+changeWallpaper();
+setInterval(changeWallpaper,900000); // 15 min
+
+/* 🔥 LOAD DATA + GRAPH */
 function loadData(){
 fetch(scriptURL)
 .then(res=>res.json())
@@ -111,6 +108,7 @@ let totals=[];
 let labels=[];
 
 for(let i=1;i<data.length;i++){
+
 let total=
 Number(data[i][1])+
 Number(data[i][2])+
@@ -141,7 +139,7 @@ type:"line",
 data:{
 labels:labels,
 datasets:[{
-label:"Total Study",
+label:"Total Study Time",
 data:totals,
 borderWidth:2
 }]
@@ -154,5 +152,6 @@ borderWidth:2
 loadData();
 
 </script>
+
 </body>
 </html>
