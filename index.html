@@ -18,8 +18,6 @@ body{
 }
 .light{ background:#f4f4f4; color:black; }
 
-.container{ padding:15px; }
-
 button{
   padding:6px 12px;
   margin:5px;
@@ -45,27 +43,17 @@ th,td{
   text-align:center;
 }
 
-/* TAB MODE */
 #tabView{
   display:none;
   text-align:center;
   height:100vh;
-  padding-top:15vh;
-  background:rgba(0,0,0,0.7);
+  padding-top:12vh;
+  background:rgba(0,0,0,0.8);
 }
 
-#clock{ font-size:60px; }
-#date{ font-size:22px; margin-bottom:10px; }
-#subject{ font-size:26px; margin:10px; }
+#clock{ font-size:55px; }
+#subject{ font-size:28px; margin:10px; }
 #remaining{ font-size:22px; }
-
-.warningBox{
-  display:none;
-  background:black;
-  padding:15px;
-  border-radius:10px;
-  margin-top:15px;
-}
 
 .red{ color:red; }
 </style>
@@ -73,9 +61,10 @@ th,td{
 
 <body>
 
-<div id="mainView" class="container">
+<div id="mainView">
 
-<h2>Dashboard 
+<h2>
+Dashboard
 <button onclick="toggleTheme()">Theme</button>
 <button onclick="enableTab()">Tab Mode</button>
 </h2>
@@ -103,40 +92,26 @@ th,td{
 
 </div>
 
-<!-- TAB MODE VIEW -->
+<!-- TAB MODE -->
 <div id="tabView">
+
 <div id="clock"></div>
 <div id="date"></div>
-
-<div>Temp - 10° | Humidity - 55%</div>
 
 <div id="subject"></div>
 <div id="remaining"></div>
 
-<div class="warningBox" id="warningBox">
-⚠ Warning Time Over<br><br>
-<button onclick="attempt()">3 Attempt</button>
-<button onclick="final()">Final</button>
-<button onclick="cancel()">Cancel</button>
-</div>
-
 <br>
-<button onclick="disableTab()">Exit</button>
+<button onclick="startStudy()">Start</button>
+<button onclick="exitTab()">Exit</button>
+
+<div id="warningBox" style="display:none; margin-top:15px;"></div>
+
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbyZTo_JXD9CVeHXr5takTUJybmaA7QP9-_5ViEcYHn4e8O5R_7Xbz8CfACTfVV_GQMq/exec";
-
-let chart;
-let remainingSeconds=1500; // 25 min default
-let timer;
-let warningActive=false;
-
-/* THEME */
-function toggleTheme(){
-  document.body.classList.toggle("light");
-}
+const scriptURL="https://script.google.com/macros/s/AKfycbwJgFB0T04xR96zL-Gn0vXauwlaWGmJWQAQFlVIZ1DBHYuUNN0TQlQhKc55nuFUPS3k/exec";
 
 /* WALLPAPER */
 function changeWallpaper(){
@@ -146,71 +121,137 @@ function changeWallpaper(){
 changeWallpaper();
 setInterval(changeWallpaper,900000);
 
-/* CLOCK */
-function updateClock(){
-  const now=new Date();
-  document.getElementById("clock").innerText=
-    now.toLocaleTimeString();
-  document.getElementById("date").innerText=
-    now.toDateString();
+/* THEME */
+function toggleTheme(){
+  document.body.classList.toggle("light");
 }
-setInterval(updateClock,1000);
+
+/* CLOCK */
+setInterval(()=>{
+  const now=new Date();
+  document.getElementById("clock").innerText=now.toLocaleTimeString();
+  document.getElementById("date").innerText=now.toDateString();
+},1000);
 
 /* TAB MODE */
 function enableTab(){
   document.getElementById("mainView").style.display="none";
   document.getElementById("tabView").style.display="block";
-  startTimer();
 }
-function disableTab(){
+function exitTab(){
   document.getElementById("tabView").style.display="none";
   document.getElementById("mainView").style.display="block";
-  clearInterval(timer);
 }
 
-/* TIMER SYSTEM */
-function startTimer(){
-  remainingSeconds=1500; // 25 min
-  warningActive=false;
-  document.getElementById("remaining").classList.remove("red");
+/* ROUTINE */
+const routine=[
+  {subject:"Math", duration:25},
+  {subject:"English", duration:30},
+  {subject:"GS", duration:20}
+];
+
+let currentIndex=0;
+let timer;
+let remainingSeconds=0;
+let warning10=false;
+
+/* START STUDY */
+function startStudy(){
+
+  if(currentIndex>=routine.length){
+    document.getElementById("subject").innerText="All Subjects Done";
+    return;
+  }
+
+  let current=routine[currentIndex];
+
+  document.getElementById("subject").innerText=
+    "Subject: "+current.subject;
+
+  remainingSeconds=current.duration*60;
+  warning10=false;
+
+  clearInterval(timer);
+
   timer=setInterval(()=>{
+
     remainingSeconds--;
+
     let m=Math.floor(remainingSeconds/60);
     let s=remainingSeconds%60;
+
     document.getElementById("remaining").innerText=
       "Remaining: "+m+":"+String(s).padStart(2,"0");
 
-    if(remainingSeconds<=0 && !warningActive){
-      warningActive=true;
-      document.getElementById("warningBox").style.display="block";
+    /* 10 MIN WARNING */
+    if(remainingSeconds===600 && !warning10){
+      warning10=true;
+      showWarning(current.subject,"10 Minutes Left");
     }
+
+    /* TIME OVER */
+    if(remainingSeconds<=0){
+      clearInterval(timer);
+      showWarning(current.subject,"Time Over");
+    }
+
   },1000);
 }
 
-function attempt(){
-  remainingSeconds=300; // 5 min extra
+/* WARNING UI */
+function showWarning(subject,msg){
+
+  document.getElementById("warningBox").style.display="block";
+  document.getElementById("warningBox").innerHTML=
+  "⚠ "+msg+"<br><br>"+
+  "<button onclick='extraTime()'>3 Attempt</button>"+
+  "<button onclick='finalTime()'>Final</button>"+
+  "<button onclick='cancelStudy()'>Cancel</button>";
+
+  sendWarningToBot(subject,msg);
+}
+
+/* TELEGRAM CALL */
+function sendWarningToBot(subject,msg){
+  fetch(scriptURL,{
+    method:"POST",
+    body:new URLSearchParams({
+      type:"warning",
+      subject:subject,
+      message:msg
+    })
+  });
+}
+
+/* OPTIONS */
+function extraTime(){
+  remainingSeconds=300;
   document.getElementById("warningBox").style.display="none";
 }
 
-function final(){
+function finalTime(){
   remainingSeconds=60;
   document.getElementById("warningBox").style.display="none";
 }
 
-function cancel(){
-  document.getElementById("warningBox").style.display="none";
+function cancelStudy(){
+  document.getElementById("subject").innerText="Subject: CANCELLED";
   document.getElementById("remaining").classList.add("red");
+  document.getElementById("warningBox").style.display="none";
+  clearInterval(timer);
+  currentIndex++;
 }
 
-/* LOAD DATA + GRAPH */
+/* GRAPH LOAD */
+let chart;
 function loadData(){
 fetch(scriptURL)
 .then(res=>res.json())
 .then(data=>{
 
-let body="";
 let totals=[];
 let labels=[];
+let body="";
 
 for(let i=1;i<data.length;i++){
 
@@ -253,7 +294,6 @@ borderWidth:2
 
 });
 }
-
 loadData();
 
 </script>
