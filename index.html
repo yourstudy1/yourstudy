@@ -3,121 +3,105 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study Full Tab</title>
-
+<title>Smart Study Final Structure</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{
 margin:0;
-font-family:'Segoe UI',sans-serif;
-overflow:hidden;
+font-family:Segoe UI;
+background:#111;
 color:white;
 }
 
-#main{
-height:100vh;
-width:100vw;
-background-size:cover;
-background-position:center;
-position:relative;
-transition:1s;
-}
-
-.overlay{
-position:absolute;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.65);
+/* DASHBOARD */
+#dashboard{
 padding:20px;
-box-sizing:border-box;
 }
 
-.top{
-text-align:center;
-}
-
-#clock{
-font-size:70px;
-}
-
-#date{
-font-size:20px;
-opacity:0.8;
-}
-
-#temp{
-margin-top:10px;
-}
-
-#subject{
-font-size:50px;
-margin-top:15vh;
-}
-
-#remaining{
-font-size:30px;
-margin-top:10px;
-}
-
-.orange{color:orange;}
-.red{color:red;}
-
-#customBox{
-margin-top:20px;
-font-size:22px;
-}
-
-.graphBox{
-position:absolute;
-bottom:20px;
-left:50%;
-transform:translateX(-50%);
-width:90%;
-max-width:900px;
+.card{
 background:rgba(255,255,255,0.08);
-padding:15px;
+padding:20px;
 border-radius:15px;
+margin-bottom:15px;
 backdrop-filter:blur(10px);
 }
 
 button{
-padding:6px 14px;
+padding:8px 15px;
 border:none;
 border-radius:8px;
 cursor:pointer;
-margin:5px;
-background:#222;
+background:#333;
 color:white;
 }
 
-#warningBox{
-margin-top:20px;
+/* TAB MODE */
+#tabMode{
+display:none;
+height:100vh;
+background-size:cover;
+background-position:center;
+text-align:center;
+position:relative;
 }
+
+.overlay{
+background:rgba(0,0,0,0.7);
+height:100%;
+padding-top:30px;
+}
+
+#time{font-size:60px;}
+#date{font-size:20px;}
+#temp{margin-top:5px;}
+#customBox{margin-top:10px;font-size:22px;}
+#subject{font-size:45px;margin-top:20px;}
+#warningTimer{font-size:25px;color:orange;}
+#studyTimer{font-size:30px;}
+#nextSubject{margin-top:10px;font-size:18px;}
+
+.red{color:red;}
+.orange{color:orange;}
 </style>
 </head>
 
 <body>
 
-<div id="main">
-<div class="overlay">
+<!-- DASHBOARD -->
+<div id="dashboard">
 
-<div class="top">
-<div id="clock"></div>
-<div id="date"></div>
-<div id="temp"></div>
-</div>
+<h2>Study Dashboard</h2>
 
-<div id="subject"></div>
-<div id="remaining"></div>
-<div id="customBox"></div>
-<div id="warningBox"></div>
-
-<div class="graphBox">
+<div class="card">
 <canvas id="studyChart"></canvas>
 </div>
+
+<div class="card">
+<div id="todayTotal"></div>
+</div>
+
+<button onclick="enterTab()">Enter Tab Mode</button>
+<a href="admin.html"><button>Admin</button></a>
+
+</div>
+
+<!-- TAB MODE -->
+<div id="tabMode">
+<div class="overlay">
+
+<div id="time"></div>
+<div id="date"></div>
+<div id="temp"></div>
+<div id="customBox"></div>
+
+<div id="subject"></div>
+<div id="warningTimer"></div>
+<div id="studyTimer"></div>
+<div id="nextSubject"></div>
+
+<button onclick="cancelStudy()">Cancel</button>
+<button onclick="exitTab()">Exit</button>
 
 </div>
 </div>
@@ -126,18 +110,18 @@ margin-top:20px;
 
 const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
 
-/* ===== WALLPAPER 15 MIN ===== */
+/* ===== WALLPAPER AUTO 15 MIN ===== */
 function changeWallpaper(){
 const url="https://picsum.photos/1920/1080?random="+Date.now();
-document.getElementById("main").style.backgroundImage="url('"+url+"')";
+document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
 }
 changeWallpaper();
 setInterval(changeWallpaper,900000);
 
-/* ===== CLOCK ===== */
+/* ===== CLOCK + DATE ===== */
 setInterval(()=>{
 let now=new Date();
-document.getElementById("clock").innerText=now.toLocaleTimeString();
+document.getElementById("time").innerText=now.toLocaleTimeString();
 document.getElementById("date").innerText=now.toDateString();
 },1000);
 
@@ -149,22 +133,19 @@ document.getElementById("temp").innerText=
 "Temperature: "+data.current_weather.temperature+"°C";
 });
 
-/* ===== COLOR REFLECT ===== */
+/* ===== COLOR CHANGE (ADMIN) ===== */
 setInterval(()=>{
 let color=localStorage.getItem("textColor")||"white";
-document.getElementById("subject").style.color=color;
+document.getElementById("time").style.color=color;
 },1000);
 
 /* ===== CUSTOM NOTIFICATION ===== */
 setInterval(()=>{
 let data=JSON.parse(localStorage.getItem("customNotification"));
-if(data){
-if(Date.now()<data.expire){
+if(data && Date.now()<data.expire){
 document.getElementById("customBox").innerText=data.message;
 }else{
-localStorage.removeItem("customNotification");
 document.getElementById("customBox").innerText="";
-}
 }
 },1000);
 
@@ -173,8 +154,10 @@ let routine=[];
 try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
 
 let activeIndex=-1;
-let studyTimer;
+let warningInterval;
+let studyInterval;
 
+/* CHECK EVERY SECOND */
 setInterval(checkSchedule,1000);
 
 function checkSchedule(){
@@ -183,94 +166,4 @@ let now=new Date();
 routine.forEach((item,index)=>{
 
 let start=new Date();
-let [h,m]=item.time.split(":");
-start.setHours(h);
-start.setMinutes(m);
-start.setSeconds(0);
-
-let diff=Math.floor((start-now)/60000);
-
-if(diff===10 && activeIndex!==index){
-preWarning(index,item);
-}
-
-});
-}
-
-/* ===== PRE WARNING ===== */
-function preWarning(index,item){
-activeIndex=index;
-
-document.getElementById("subject").innerText="Upcoming: "+item.subject;
-document.getElementById("subject").className="orange";
-
-document.getElementById("warningBox").innerHTML=
-"<button onclick='startNow()'>Start</button>"+
-"<button onclick='cancelNow()'>Cancel</button>"+
-"<button onclick='sameSubject()'>Same</button>";
-
-fetch(scriptURL,{
-method:"POST",
-body:new URLSearchParams({
-type:"warning",
-subject:item.subject,
-message:"Starting in 10 Minutes"
-})
-});
-}
-
-/* ===== BUTTON ACTION ===== */
-function startNow(){
-startStudy(routine[activeIndex]);
-}
-
-function sameSubject(){
-startStudy(routine[activeIndex]);
-}
-
-function cancelNow(){
-clearInterval(studyTimer);
-document.getElementById("subject").innerText="CANCELLED";
-document.getElementById("subject").className="red";
-document.getElementById("remaining").innerText="";
-}
-
-/* ===== STUDY TIMER ===== */
-function startStudy(item){
-let seconds=item.duration*60;
-
-studyTimer=setInterval(()=>{
-seconds--;
-
-let m=Math.floor(seconds/60);
-let s=seconds%60;
-
-document.getElementById("subject").innerText=item.subject;
-document.getElementById("subject").className="";
-document.getElementById("remaining").innerText=
-m+":"+String(s).padStart(2,"0");
-
-if(seconds<=0){
-cancelNow();
-}
-
-},1000);
-}
-
-/* ===== STUDY GRAPH ===== */
-new Chart(document.getElementById("studyChart"),{
-type:"bar",
-data:{
-labels:["Math","English","GS","Reason"],
-datasets:[{
-label:"Study Hours",
-data:[2,3,1,4],
-backgroundColor:"rgba(0,150,255,0.6)"
-}]
-},
-options:{responsive:true}
-});
-
-</script>
-</body>
-</html>
+let
