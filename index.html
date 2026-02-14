@@ -44,14 +44,18 @@ cursor:pointer;
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbztlolwWP31ST1fhUWjM0f2qZrBjkibbW9-NunKQSrYSD3QyekZlEAS7LtcZt2vUlgybA/exec";
+const scriptURL="https://script.google.com/macros/s/AKfycbzDv8szJqqDX-bhM08AYF0C5X-Zv1VvfX6LAhnGfFIZMd9BsDeNlMXqHmptnizpdCqYiA/exec";
 
 /* CLOCK */
 setInterval(()=>{
 const now=new Date();
 document.getElementById("clock").innerText=now.toLocaleTimeString();
 },1000);
-
+<div style="position:absolute; top:10px; left:10px;">
+  <a href="./admin.html">
+    <button style="font-size:12px;">ADMIN</button>
+  </a>
+</div>
 /* WALLPAPER */
 function changeWallpaper(){
 const url="https://picsum.photos/1600/900?random="+new Date().getTime();
