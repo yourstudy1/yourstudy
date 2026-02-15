@@ -4,121 +4,97 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Smart Study Final</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;font-family:Segoe UI;background:#111;color:white;}
-#dashboard{padding:20px;}
-.card{background:rgba(255,255,255,0.08);padding:20px;border-radius:15px;margin-bottom:15px;}
-button{padding:8px 15px;border:none;border-radius:8px;background:#333;color:white;cursor:pointer;}
-#tabMode{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background-size:cover;background-position:center;text-align:center;z-index:9999;}
-.overlay{background:rgba(0,0,0,0.75);height:100%;padding-top:40px;}
+#tabMode{position:fixed;top:0;left:0;width:100vw;height:100vh;
+background-size:cover;background-position:center;text-align:center;}
+.overlay{background:rgba(0,0,0,0.7);height:100%;padding-top:40px;}
 #time{font-size:90px;}
-#date{font-size:28px;}
-#temp{font-size:24px;}
 #subject{font-size:60px;margin-top:40px;}
 #warningTimer{font-size:35px;color:orange;}
 #studyTimer{font-size:40px;}
-#nextSubject{font-size:24px;margin-top:15px;}
-#customBox{font-size:24px;margin-top:10px;}
-#exitBtn{position:absolute;bottom:20px;right:30px;background:rgba(0,0,0,0.6);}
 </style>
 </head>
-
 <body>
-
-<div id="dashboard">
-<h2>Study Dashboard</h2>
-<div class="card"><canvas id="studyChart"></canvas></div>
-<button onclick="enterTab()">Enter Tab Mode</button>
-<a href="admin.html"><button>Admin</button></a>
-</div>
 
 <div id="tabMode">
 <div class="overlay">
 <div id="time"></div>
-<div id="date"></div>
-<div id="temp"></div>
-<div id="customBox"></div>
 <div id="subject"></div>
 <div id="warningTimer"></div>
 <div id="studyTimer"></div>
-<div id="nextSubject"></div>
-<button onclick="cancelStudy()">Cancel</button>
-<button id="exitBtn" onclick="exitTab()">Exit</button>
 </div>
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbwZgBkXSQn_tmhD8_S3mMAj0gSudC-qpj_2c_HsXrVX0JK-0oJE8nIxArb502bnNOgNPw/exec";
-
-/* WALLPAPER */
-function changeWallpaper(){
-document.getElementById("tabMode").style.backgroundImage=
-"url('https://picsum.photos/1920/1080?random="+Date.now()+"')";
-}
-changeWallpaper();
-setInterval(changeWallpaper,900000);
+const scriptURL="https://script.google.com/macros/s/AKfycbzBSTQReMLXT1Bk-301B1fxF0Ak8BTgRTNZWty1TZ_AXAtxFI_3f_faSN70voQ7sIppug/exec";
 
 /* CLOCK */
 setInterval(()=>{
-let now=new Date();
-document.getElementById("time").innerText=now.toLocaleTimeString();
-document.getElementById("date").innerText=now.toDateString();
+document.getElementById("time").innerText=
+new Date().toLocaleTimeString();
 },1000);
-let currentMode = "normal";
-
-/* SERVER থেকে MODE আনবে */
-setInterval(fetchModeFromServer,2000);
-
-function fetchModeFromServer(){
-fetch(scriptURL + "?action=status")
-.then(res=>res.json())
-.then(data=>{
-if(data.mode){
-currentMode = data.mode;
-}
-});
-}
-
-/* TEMP */
-fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
-.then(res=>res.json())
-.then(data=>{
-document.getElementById("temp").innerText=
-"Temperature: "+data.current_weather.temperature+"°C";
-});
 
 /* TELEGRAM SYNC */
+let currentMode="normal";
+let studyInterval;
+let studySeconds=0;
+
 setInterval(()=>{
 fetch(scriptURL+"?action=status")
 .then(res=>res.json())
 .then(data=>{
 
-if(data.mode) localStorage.setItem("systemMode",data.mode);
+if(data.mode) currentMode=data.mode;
+
 if(data.action==="cancel") cancelStudy();
+if(data.action==="start") startStudy(25);
+if(data.action==="same") startStudy(25);
 if(data.extend) studySeconds+=parseInt(data.extend)*60;
 
 });
 },2000);
 
-/* ROUTINE */
-let routine=[];
-try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
-let studyInterval;
-let studySeconds=0;
+/* WARNING SYSTEM */
+function triggerWarning(subject){
 
-function startStudy(item){
-studySeconds=item.duration*60;
+fetch(scriptURL+"?action=warning&subject="+subject);
+
+let seconds=600;
+
+let warningInterval=setInterval(()=>{
+seconds--;
+let m=Math.floor(seconds/60);
+let s=seconds%60;
+document.getElementById("subject").innerText="Upcoming: "+subject;
+document.getElementById("warningTimer").innerText=
+"Warning: "+m+":"+String(s).padStart(2,"0");
+
+if(seconds<=0){
+clearInterval(warningInterval);
+startStudy(25);
+}
+},1000);
+}
+
+/* STUDY */
+function startStudy(minutes){
+
+studySeconds=minutes*60;
+
 clearInterval(studyInterval);
+
 studyInterval=setInterval(()=>{
 studySeconds--;
 let m=Math.floor(studySeconds/60);
 let s=studySeconds%60;
-document.getElementById("subject").innerText=item.subject;
+
+document.getElementById("subject").innerText="STUDYING";
+document.getElementById("warningTimer").innerText="";
 document.getElementById("studyTimer").innerText=
-"Study: "+m+":"+String(s).padStart(2,"0");
+m+":"+String(s).padStart(2,"0");
+
 if(studySeconds<=0) cancelStudy();
 },1000);
 }
@@ -129,46 +105,8 @@ document.getElementById("studyTimer").innerText="";
 document.getElementById("subject").innerText="CANCELLED";
 }
 
-/* DASHBOARD CHART */
-new Chart(document.getElementById("studyChart"),{
-type:"bar",
-data:{
-labels:["Math","English","GS","Reason"],
-datasets:[{data:[2,3,1,4],backgroundColor:"rgba(0,150,255,0.6)"}]
-}
-});
-
-/* MODE SWITCH */
-function enterTab(){
-document.getElementById("dashboard").style.display="none";
-document.getElementById("tabMode").style.display="block";
-}
-function exitTab(){
-document.getElementById("dashboard").style.display="block";
-document.getElementById("tabMode").style.display="none";
-}
-setInterval(checkModeDisplay,1000);
-
-function checkModeDisplay(){
-
-if(currentMode === "office"){
-document.getElementById("subject").innerText = "OFFICE MODE";
-document.getElementById("studyTimer").innerText = "";
-return;
-}
-
-if(currentMode === "sleep"){
-document.getElementById("subject").innerText = "SLEEP MODE";
-document.getElementById("studyTimer").innerText = "";
-return;
-}
-
-if(currentMode === "mock"){
-document.getElementById("subject").innerText = "MOCK MODE";
-return;
-}
-
-}
+/* AUTO TEST WARNING */
+setTimeout(()=>triggerWarning("Math"),5000);
 
 </script>
 </body>
