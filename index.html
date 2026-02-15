@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study Final Structure</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Smart Study</title>
 
 <style>
 body{
@@ -24,24 +23,6 @@ background:rgba(255,255,255,0.08);
 padding:20px;
 border-radius:15px;
 margin-bottom:15px;
-backdrop-filter:blur(10px);
-}
-
-button{
-padding:8px 15px;
-border:none;
-border-radius:8px;
-cursor:pointer;
-background:#333;
-color:white;
-}
-#exitBtn{
-position:absolute;
-bottom:20px;
-right:30px;
-padding:6px 14px;
-font-size:14px;
-background:rgba(0,0,0,0.6);
 }
 
 /* TAB MODE */
@@ -54,29 +35,44 @@ width:100vw;
 height:100vh;
 background-size:cover;
 background-position:center;
-background-repeat:no-repeat;
-text-align:center;
 z-index:9999;
+text-align:center;
 }
 
-
 .overlay{
-background:rgba(0,0,0,0.7);
+background:rgba(0,0,0,0.75);
 height:100%;
-padding-top:30px;
+padding-top:40px;
 }
 
 #time{font-size:90px;font-weight:bold;}
-#date{font-size:28px;margin-top:5px;}
-#temp{font-size:24px;margin-top:5px;}
+#date{font-size:28px;}
+#temp{font-size:24px;}
 #subject{font-size:60px;margin-top:40px;font-weight:bold;}
-#warningTimer{font-size:35px;margin-top:10px;}
-#studyTimer{font-size:40px;margin-top:10px;}
+#warningTimer{font-size:35px;color:orange;}
+#studyTimer{font-size:40px;}
 #nextSubject{font-size:24px;margin-top:15px;}
-
+#customBox{font-size:24px;margin-top:10px;}
 
 .red{color:red;}
-.orange{color:orange;}
+
+button{
+padding:8px 15px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:#333;
+color:white;
+margin:5px;
+}
+
+#exitBtn{
+position:absolute;
+bottom:20px;
+right:30px;
+font-size:14px;
+background:rgba(0,0,0,0.6);
+}
 </style>
 </head>
 
@@ -84,20 +80,9 @@ padding-top:30px;
 
 <!-- DASHBOARD -->
 <div id="dashboard">
-
 <h2>Study Dashboard</h2>
-
-<div class="card">
-<canvas id="studyChart"></canvas>
-</div>
-
-<div class="card">
-<div id="todayTotal"></div>
-</div>
-
-<button onclick="enterTab()">Enter Tab Mode</button>
+<button onclick="enterTab()">Tab Mode</button>
 <a href="admin.html"><button>Admin</button></a>
-
 </div>
 
 <!-- TAB MODE -->
@@ -115,17 +100,16 @@ padding-top:30px;
 <div id="nextSubject"></div>
 
 <button onclick="cancelStudy()">Cancel</button>
-<button id="exitBtn" onclick="exitTab()">EXIT</button>
-
+<button id="exitBtn" onclick="exitTab()">Exit</button>
 
 </div>
 </div>
 
 <script>
-
-const scriptURL="https://script.google.com/macros/s/AKfycbwNOOoUixPcRWeMjIv9C2TgqEREVtoFhlOwqnkn2QJt2OZluQyvju5SaBXNhnN_KHsQTQ/exec";
-
-/* ===== WALLPAPER AUTO 15 MIN ===== */
+const scriptURL = "const scriptURL="https://script.google.com/macros/s/AKfycbxq49CFhIWiKHxh69xPBczmBuiMcjw5YIoYuEq6lwZYybsAZWuG2Q9q8guseFWTa2Wd0A/exec";
+/* ===========================
+   WALLPAPER AUTO CHANGE
+=========================== */
 function changeWallpaper(){
 const url="https://picsum.photos/1920/1080?random="+Date.now();
 document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
@@ -133,14 +117,18 @@ document.getElementById("tabMode").style.backgroundImage="url('"+url+"')";
 changeWallpaper();
 setInterval(changeWallpaper,900000);
 
-/* ===== CLOCK + DATE ===== */
+/* ===========================
+   CLOCK + DATE
+=========================== */
 setInterval(()=>{
 let now=new Date();
 document.getElementById("time").innerText=now.toLocaleTimeString();
 document.getElementById("date").innerText=now.toDateString();
 },1000);
 
-/* ===== TEMPERATURE ===== */
+/* ===========================
+   TEMPERATURE
+=========================== */
 fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
 .then(res=>res.json())
 .then(data=>{
@@ -148,13 +136,17 @@ document.getElementById("temp").innerText=
 "Temperature: "+data.current_weather.temperature+"°C";
 });
 
-/* ===== COLOR CHANGE (ADMIN) ===== */
+/* ===========================
+   COLOR CHANGE FROM ADMIN
+=========================== */
 setInterval(()=>{
 let color=localStorage.getItem("textColor")||"white";
 document.getElementById("time").style.color=color;
 },1000);
 
-/* ===== CUSTOM NOTIFICATION ===== */
+/* ===========================
+   CUSTOM NOTIFICATION
+=========================== */
 setInterval(()=>{
 let data=JSON.parse(localStorage.getItem("customNotification"));
 if(data && Date.now()<data.expire){
@@ -164,18 +156,38 @@ document.getElementById("customBox").innerText="";
 }
 },1000);
 
-/* ===== ROUTINE ===== */
+/* ===========================
+   MODE SYSTEM
+=========================== */
+let systemMode="normal";
 let routine=[];
-try{routine=JSON.parse(localStorage.getItem("routine"))||[];}catch(e){}
-
 let activeIndex=-1;
 let warningInterval;
 let studyInterval;
+let studySeconds=0;
 
-/* CHECK EVERY SECOND */
+try{
+routine=JSON.parse(localStorage.getItem("routine"))||[];
+}catch(e){}
+
 setInterval(checkSchedule,1000);
 
 function checkSchedule(){
+
+systemMode=localStorage.getItem("systemMode")||"normal";
+
+if(systemMode==="sleep"){
+clearAll();
+document.getElementById("subject").innerText="SLEEP MODE";
+return;
+}
+
+if(systemMode==="office"){
+clearAll();
+document.getElementById("subject").innerText="OFFICE TIME";
+return;
+}
+
 let now=new Date();
 
 routine.forEach((item,index)=>{
@@ -188,29 +200,32 @@ start.setSeconds(0);
 
 let diff=Math.floor((start-now)/60000);
 
-/* 10 MIN WARNING */
-if(diff===10 && activeIndex!==index){
+/* WARNING (10 MIN) */
+if(diff===10 && activeIndex!==index && systemMode!=="mock"){
 startWarning(index,item);
 }
 
 });
 }
 
-/* WARNING TIMER */
+/* ===========================
+   WARNING COUNTDOWN
+=========================== */
 function startWarning(index,item){
+
 activeIndex=index;
 let seconds=600;
-
-document.getElementById("subject").innerText="Upcoming: "+item.subject;
 
 clearInterval(warningInterval);
 
 warningInterval=setInterval(()=>{
+
 seconds--;
 
 let m=Math.floor(seconds/60);
 let s=seconds%60;
 
+document.getElementById("subject").innerText="Upcoming: "+item.subject;
 document.getElementById("warningTimer").innerText=
 "Warning: "+m+":"+String(s).padStart(2,"0");
 
@@ -223,24 +238,28 @@ startStudy(item);
 
 }
 
-/* STUDY TIMER */
+/* ===========================
+   STUDY COUNTDOWN
+=========================== */
 function startStudy(item){
-let seconds=item.duration*60;
+
+studySeconds=item.duration*60;
 
 clearInterval(studyInterval);
 
 studyInterval=setInterval(()=>{
-seconds--;
 
-let m=Math.floor(seconds/60);
-let s=seconds%60;
+studySeconds--;
 
-document.getElementById("subject").innerText=item.subject;
+let m=Math.floor(studySeconds/60);
+let s=studySeconds%60;
+
 document.getElementById("warningTimer").innerText="";
+document.getElementById("subject").innerText=item.subject;
 document.getElementById("studyTimer").innerText=
-"Study Time: "+m+":"+String(s).padStart(2,"0");
+"Study: "+m+":"+String(s).padStart(2,"0");
 
-if(seconds<=0){
+if(studySeconds<=0){
 cancelStudy();
 }
 
@@ -248,16 +267,27 @@ cancelStudy();
 
 }
 
-/* CANCEL */
+/* ===========================
+   CANCEL
+=========================== */
 function cancelStudy(){
-clearInterval(warningInterval);
-clearInterval(studyInterval);
-document.getElementById("studyTimer").innerText="";
-document.getElementById("warningTimer").innerText="";
+clearAll();
 document.getElementById("subject").innerText="CANCELLED";
 }
 
-/* NEXT SUBJECT */
+/* ===========================
+   CLEAR
+=========================== */
+function clearAll(){
+clearInterval(warningInterval);
+clearInterval(studyInterval);
+document.getElementById("warningTimer").innerText="";
+document.getElementById("studyTimer").innerText="";
+}
+
+/* ===========================
+   NEXT SUBJECT
+=========================== */
 setInterval(()=>{
 if(routine.length>0){
 document.getElementById("nextSubject").innerText=
@@ -265,32 +295,9 @@ document.getElementById("nextSubject").innerText=
 }
 },5000);
 
-/* DASHBOARD GRAPH */
-let subjectData={};
-
-routine.forEach(item=>{
-if(!subjectData[item.subject]) subjectData[item.subject]=0;
-subjectData[item.subject]+=item.duration;
-});
-
-new Chart(document.getElementById("studyChart"),{
-type:"bar",
-data:{
-labels:Object.keys(subjectData),
-datasets:[{
-data:Object.values(subjectData),
-backgroundColor:"rgba(0,150,255,0.6)"
-}]
-}
-});
-
-/* TODAY TOTAL */
-let total=0;
-routine.forEach(item=> total+=item.duration);
-document.getElementById("todayTotal").innerText=
-"Today's Planned Study: "+total+" minutes";
-
-/* MODE SWITCH */
+/* ===========================
+   MODE SWITCH
+=========================== */
 function enterTab(){
 document.getElementById("dashboard").style.display="none";
 document.getElementById("tabMode").style.display="block";
