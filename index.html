@@ -3,35 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart Study Final</title>
+<title>Smart Study</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body{margin:0;font-family:Segoe UI;background:#111;color:white;}
 #dashboard{padding:20px;}
 .card{background:rgba(255,255,255,0.08);padding:20px;border-radius:15px;margin-bottom:15px;}
-button{padding:8px 15px;border:none;border-radius:8px;background:#333;color:white;margin:5px;cursor:pointer;}
+button{padding:8px 15px;border:none;border-radius:8px;background:#333;color:white;margin:5px;}
 #tabMode{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background-size:cover;background-position:center;text-align:center;}
-.overlay{background:rgba(0,0,0,0.7);height:100%;padding-top:40px;}
+.overlay{background:rgba(0,0,0,0.75);height:100%;padding-top:40px;}
 #time{font-size:80px;}
-#date{font-size:25px;}
-#temp{font-size:22px;}
-#customBox{font-size:22px;color:yellow;}
-#subject{font-size:55px;margin-top:30px;}
+#subject{font-size:50px;margin-top:30px;}
 #warningTimer{font-size:30px;color:orange;}
 #studyTimer{font-size:35px;}
-#nextSubject{font-size:20px;margin-top:15px;}
-#exitBtn{position:absolute;bottom:20px;right:30px;}
 </style>
 </head>
-
 <body>
 
 <div id="dashboard">
 <h2>Study Dashboard</h2>
-<div class="card">
-<canvas id="chart"></canvas>
-</div>
+<div class="card"><canvas id="chart"></canvas></div>
 <button onclick="enterTab()">Enter Tab Mode</button>
 <a href="admin.html"><button>Admin</button></a>
 </div>
@@ -39,71 +31,38 @@ button{padding:8px 15px;border:none;border-radius:8px;background:#333;color:whit
 <div id="tabMode">
 <div class="overlay">
 <div id="time"></div>
-<div id="date"></div>
-<div id="temp"></div>
-<div id="customBox"></div>
 <div id="subject"></div>
 <div id="warningTimer"></div>
 <div id="studyTimer"></div>
-<div id="nextSubject"></div>
 <button onclick="cancelStudy()">Cancel</button>
-<button id="exitBtn" onclick="exitTab()">Exit</button>
+<button onclick="exitTab()">Exit</button>
 </div>
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbxmEHsDlCscMY3lfDBWHCnDzPieo8QTF72Ab4boJ5P_yxEvWk5_ItJcz0iTQ6pSeue0qg/exec";
+const scriptURL="https://script.google.com/macros/s/AKfycbzKzRH7u1BZJxBZxJ2sdk0ZFD9hzmYd8OcxbBx-y2Kv8jnuWVz34sLKs2Y84VexXPU6mw/execL";
 
 let currentMode="normal";
-let studyInterval;
-let warningInterval;
+let studyInterval,warningInterval;
 let studySeconds=0;
 let activeSubject=null;
 
 /* CLOCK */
 setInterval(()=>{
-let now=new Date();
-document.getElementById("time").innerText=now.toLocaleTimeString();
-document.getElementById("date").innerText=now.toDateString();
-},1000);
-
-/* TEMP */
-fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
-.then(res=>res.json())
-.then(data=>{
-document.getElementById("temp").innerText="Temp: "+data.current_weather.temperature+"°C";
-});
-
-/* WALLPAPER */
-function changeWallpaper(){
-document.getElementById("tabMode").style.backgroundImage=
-"url('https://picsum.photos/1920/1080?random="+Date.now()+"')";
-}
-changeWallpaper();
-setInterval(changeWallpaper,900000);
-
-/* CUSTOM NOTIFICATION */
-setInterval(()=>{
-let data=JSON.parse(localStorage.getItem("customNotification"));
-if(data && Date.now()<data.expire){
-document.getElementById("customBox").innerText=data.message;
-}else{
-document.getElementById("customBox").innerText="";
-localStorage.removeItem("customNotification");
-}
+document.getElementById("time").innerText=new Date().toLocaleTimeString();
 },1000);
 
 /* TELEGRAM SYNC */
 setInterval(()=>{
 fetch(scriptURL+"?action=status")
-.then(res=>res.json())
-.then(data=>{
-if(data.mode) currentMode=data.mode;
-if(data.action==="start") startStudy(activeSubject);
-if(data.action==="cancel") cancelStudy();
-if(data.action==="same") startStudy(activeSubject);
-if(data.extend) studySeconds+=parseInt(data.extend)*60;
+.then(r=>r.json())
+.then(d=>{
+if(d.mode) currentMode=d.mode;
+if(d.action==="cancel") cancelStudy();
+if(d.action==="start") startStudy(activeSubject);
+if(d.action==="same") startStudy(activeSubject);
+if(d.extend) studySeconds+=parseInt(d.extend)*60;
 });
 },2000);
 
@@ -130,31 +89,27 @@ startWarning(item);
 }
 });
 },1000);
-setInterval(()=>{
-let color = localStorage.getItem("textColor") || "white";
-document.getElementById("time").style.color = color;
-},1000);
-/* WARNING */
+
 function startWarning(item){
-let seconds=600;
+let sec=600;
 clearInterval(warningInterval);
 warningInterval=setInterval(()=>{
-seconds--;
-let m=Math.floor(seconds/60);
-let s=seconds%60;
+sec--;
+let m=Math.floor(sec/60);
+let s=sec%60;
 document.getElementById("subject").innerText="Upcoming: "+item.subject;
 document.getElementById("warningTimer").innerText=
 "Warning: "+m+":"+String(s).padStart(2,"0");
-if(seconds<=0){
+if(sec<=0){
 clearInterval(warningInterval);
 startStudy(item);
 }
 },1000);
 }
 
-/* STUDY */
 function startStudy(item){
 if(!item) return;
+fetch(scriptURL+"?action=study&subject="+item.subject);
 studySeconds=item.duration*60;
 clearInterval(studyInterval);
 studyInterval=setInterval(()=>{
@@ -169,7 +124,6 @@ if(studySeconds<=0) cancelStudy();
 },1000);
 }
 
-/* CANCEL */
 function cancelStudy(){
 clearInterval(studyInterval);
 clearInterval(warningInterval);
@@ -178,16 +132,6 @@ document.getElementById("warningTimer").innerText="";
 document.getElementById("subject").innerText="CANCELLED";
 }
 
-/* CHART */
-new Chart(document.getElementById("chart"),{
-type:"bar",
-data:{
-labels:["Math","English","GS","Reason"],
-datasets:[{data:[2,3,1,4],backgroundColor:"rgba(0,150,255,0.6)"}]
-}
-});
-
-/* MODE SWITCH */
 function enterTab(){
 document.getElementById("dashboard").style.display="none";
 document.getElementById("tabMode").style.display="block";
