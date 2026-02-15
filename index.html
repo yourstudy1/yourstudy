@@ -130,7 +130,10 @@ startWarning(item);
 }
 });
 },1000);
-
+setInterval(()=>{
+let color = localStorage.getItem("textColor") || "white";
+document.getElementById("time").style.color = color;
+},1000);
 /* WARNING */
 function startWarning(item){
 let seconds=600;
