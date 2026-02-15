@@ -43,6 +43,12 @@ text-align:center;
 #adminPanel{
 display:none;
 }
+
+.section{
+border-bottom:1px solid rgba(255,255,255,0.1);
+margin-bottom:10px;
+padding-bottom:10px;
+}
 </style>
 </head>
 <body>
@@ -60,7 +66,7 @@ display:none;
 
 <h2>Admin Panel</h2>
 
-<!-- COLOR CHANGE -->
+<!-- COLOR -->
 <div class="card">
 <h3>Change Time Color</h3>
 <input type="color" id="colorPicker">
@@ -68,56 +74,37 @@ display:none;
 <button onclick="saveColor()">Save Color</button>
 </div>
 
-<!-- CUSTOM NOTIFICATION -->
+<!-- CUSTOM -->
 <div class="card">
 <h3>Custom Notification</h3>
-
 <input type="text" id="customText" placeholder="Enter Message">
 <br>
-
 <label>Duration (Minutes):</label>
 <input type="number" id="customDuration" min="1">
 <br>
-
-<button onclick="saveCustom()">Send Notification</button>
+<button onclick="saveCustom()">Send</button>
 </div>
 
-<!-- ROUTINE ADD -->
+<!-- ROUTINE 6 SECTION -->
 <div class="card">
-<h3>Add Routine</h3>
+<h3>Add Routine (6 Sections)</h3>
 
-<input type="text" id="subject" placeholder="Subject Name">
-<br>
+<div id="routineSections"></div>
 
-<label>Start Time:</label>
-<input type="time" id="startTime">
-<br>
+<button onclick="saveRoutine()">Save Routine</button>
+<button onclick="clearRoutine()">Clear All</button>
 
-<label>Duration (Minutes):</label>
-<input type="number" id="duration" min="1">
-<br>
-
-<button onclick="addRoutine()">Add Routine</button>
-</div>
-
-<!-- ROUTINE LIST -->
-<div class="card">
-<h3>Saved Routine</h3>
-<div id="routineList"></div>
 </div>
 
 </div>
 
 <script>
 
-/* 🔐 CHANGE PASSWORD HERE */
-const ADMIN_PASSWORD = "1234";
+/* 🔐 PASSWORD */
+const ADMIN_PASSWORD="1234";
 
-/* LOGIN SYSTEM */
 function checkPassword(){
-const input=document.getElementById("adminPass").value;
-
-if(input===ADMIN_PASSWORD){
+if(document.getElementById("adminPass").value===ADMIN_PASSWORD){
 document.getElementById("loginBox").style.display="none";
 document.getElementById("adminPanel").style.display="block";
 }else{
@@ -125,89 +112,89 @@ alert("Wrong Password");
 }
 }
 
-/* COLOR SAVE */
+/* COLOR */
 function saveColor(){
-const color=document.getElementById("colorPicker").value;
-localStorage.setItem("textColor",color);
+localStorage.setItem("textColor",
+document.getElementById("colorPicker").value);
 alert("Color Saved");
 }
 
-/* CUSTOM NOTIFICATION */
+/* CUSTOM */
 function saveCustom(){
 
-const message=document.getElementById("customText").value;
-const minutes=parseInt(document.getElementById("customDuration").value);
+const msg=document.getElementById("customText").value;
+const min=parseInt(document.getElementById("customDuration").value);
 
-if(!message || !minutes){
-alert("Enter message and duration");
+if(!msg||!min){
+alert("Enter message & duration");
 return;
 }
 
 localStorage.setItem("customNotification",JSON.stringify({
-message:message,
-expire:Date.now()+(minutes*60*1000)
+message:msg,
+expire:Date.now()+(min*60*1000)
 }));
 
-alert("Notification Sent for "+minutes+" minutes");
+alert("Notification Sent");
 }
 
-/* ROUTINE SYSTEM */
-let routine=[];
-try{
-routine=JSON.parse(localStorage.getItem("routine"))||[];
-}catch(e){
-routine=[];
-}
+/* ===== 6 SECTION ROUTINE ===== */
 
-function addRoutine(){
+function generateSections(){
 
-const subject=document.getElementById("subject").value;
-const startTime=document.getElementById("startTime").value;
-const duration=parseInt(document.getElementById("duration").value);
+let html="";
 
-if(!subject||!startTime||!duration){
-alert("Fill all fields");
-return;
-}
-
-routine.push({
-subject:subject,
-time:startTime,
-duration:duration
-});
-
-localStorage.setItem("routine",JSON.stringify(routine));
-
-renderRoutine();
-
-document.getElementById("subject").value="";
-document.getElementById("startTime").value="";
-document.getElementById("duration").value="";
-}
-
-function renderRoutine(){
-
-document.getElementById("routineList").innerHTML="";
-
-routine.forEach((item,index)=>{
-
-document.getElementById("routineList").innerHTML+=
-`
-<div>
-${item.subject} - ${item.time} - ${item.duration} min
-<button onclick="deleteRoutine(${index})">Delete</button>
+for(let i=1;i<=6;i++){
+html+=`
+<div class="section">
+<h4>Section ${i}</h4>
+<input type="text" id="subject${i}" placeholder="Subject">
+<br>
+<label>Start Time:</label>
+<input type="time" id="time${i}">
+<br>
+<label>Duration (Minutes):</label>
+<input type="number" id="duration${i}">
 </div>
 `;
+}
+
+document.getElementById("routineSections").innerHTML=html;
+}
+
+generateSections();
+
+/* SAVE ROUTINE */
+function saveRoutine(){
+
+let routine=[];
+
+for(let i=1;i<=6;i++){
+
+let subject=document.getElementById("subject"+i).value;
+let time=document.getElementById("time"+i).value;
+let duration=parseInt(document.getElementById("duration"+i).value);
+
+if(subject && time && duration){
+routine.push({
+subject:subject,
+time:time,
+duration:duration
 });
 }
 
-function deleteRoutine(index){
-routine.splice(index,1);
-localStorage.setItem("routine",JSON.stringify(routine));
-renderRoutine();
 }
 
-renderRoutine();
+localStorage.setItem("routine",JSON.stringify(routine));
+
+alert("Routine Saved");
+}
+
+/* CLEAR */
+function clearRoutine(){
+localStorage.removeItem("routine");
+alert("Routine Cleared");
+}
 
 </script>
 
