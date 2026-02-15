@@ -2,133 +2,196 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Study Admin</title>
 
 <style>
-body{font-family:Arial; background:#111; color:white; padding:20px;}
-.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
-.box{border:1px solid gray; padding:10px;}
-select,input,textarea{width:100%; padding:5px; margin-top:5px;}
-button{padding:8px 15px; margin-top:10px; cursor:pointer;}
-#panel{display:none;}
+body{
+background:#111;
+color:white;
+font-family:Segoe UI;
+padding:20px;
+margin:0;
+}
+
+.card{
+background:rgba(255,255,255,0.08);
+padding:15px;
+border-radius:12px;
+margin-bottom:20px;
+}
+
+input,button{
+padding:8px;
+margin:5px 0;
+border:none;
+border-radius:6px;
+}
+
+button{
+background:#333;
+color:white;
+cursor:pointer;
+}
+
+h2{
+margin-top:0;
+}
 </style>
 </head>
 <body>
 
-<h2>Admin Login</h2>
-<input type="password" id="pass" placeholder="Password">
-<button onclick="login()">Login</button>
+<h2>Admin Panel</h2>
 
-<div id="panel">
-
-<h3>Routine Setup</h3>
-
-<div class="grid" id="slots"></div>
-
-<button onclick="saveRoutine()">Save Routine</button>
-
-<h3>Text Color</h3>
+<!-- COLOR CHANGE -->
+<div class="card">
+<h3>Change Time Color</h3>
 <input type="color" id="colorPicker">
+<br>
 <button onclick="saveColor()">Save Color</button>
+</div>
 
-<h3>Custom Notification (15 Min)</h3>
-<textarea id="customMsg"></textarea>
-<button onclick="sendCustom()">Send 15 Min Notification</button>
+<!-- CUSTOM NOTIFICATION -->
+<div class="card">
+<h3>Custom Notification</h3>
 
+<input type="text" id="customText" placeholder="Enter Message">
+
+<br>
+
+<label>Duration (Minutes):</label>
+<input type="number" id="customDuration" min="1" placeholder="e.g. 10">
+
+<br>
+
+<button onclick="saveCustom()">Send Notification</button>
+</div>
+
+<!-- ROUTINE ADD -->
+<div class="card">
+<h3>Add Routine</h3>
+
+<input type="text" id="subject" placeholder="Subject Name">
+<br>
+
+<label>Start Time:</label>
+<input type="time" id="startTime">
+<br>
+
+<label>Duration (Minutes):</label>
+<input type="number" id="duration" min="1">
+<br>
+
+<button onclick="addRoutine()">Add Routine</button>
+</div>
+
+<!-- ROUTINE LIST -->
+<div class="card">
+<h3>Saved Routine</h3>
+<div id="routineList"></div>
 </div>
 
 <script>
 
-const scriptURL="https://script.google.com/macros/s/AKfycbzBSTQReMLXT1Bk-301B1fxF0Ak8BTgRTNZWty1TZ_AXAtxFI_3f_faSN70voQ7sIppug/exec";
-const password="king2026";
-
-/* LOGIN */
-function login(){
-if(document.getElementById("pass").value===password){
-document.getElementById("panel").style.display="block";
-}else{
-alert("Wrong Password");
-}
-}
-
-/* GENERATE TIME DROPDOWN */
-function generateTimeOptions(){
-let options="";
-for(let h=0;h<24;h++){
-for(let m=0;m<60;m+=15){
-let hh=String(h).padStart(2,"0");
-let mm=String(m).padStart(2,"0");
-options+=`<option>${hh}:${mm}</option>`;
-}
-}
-return options;
-}
-
-/* CREATE 6 SLOT */
-for(let i=1;i<=6;i++){
-document.getElementById("slots").innerHTML+=`
-<div class="box">
-Time:
-<select id="time${i}">${generateTimeOptions()}</select>
-Subject:
-<select id="subject${i}">
-<option>Math</option>
-<option>English</option>
-<option>GS</option>
-<option>Reasoning</option>
-<option>Mock</option>
-<option>Revision</option>
-</select>
-Duration (min):
-<input type="number" id="duration${i}" value="25">
-</div>`;
-}
-
-/* SAVE ROUTINE */
-function saveRoutine(){
-
-let routine=[];
-
-for(let i=1;i<=6;i++){
-routine.push({
-time:document.getElementById("time"+i).value,
-subject:document.getElementById("subject"+i).value,
-duration:Number(document.getElementById("duration"+i).value)
-});
-}
-
-localStorage.setItem("routine",JSON.stringify(routine));
-alert("Routine Saved");
-}
-
-/* SAVE COLOR */
+/* =====================
+   COLOR SAVE
+===================== */
 function saveColor(){
-localStorage.setItem("textColor",
-document.getElementById("colorPicker").value);
+
+const color = document.getElementById("colorPicker").value;
+
+if(!color){
+alert("Select a color");
+return;
+}
+
+localStorage.setItem("textColor", color);
+
 alert("Color Saved");
 }
 
-/* CUSTOM */
-function sendCustom(){
+/* =====================
+   CUSTOM NOTIFICATION
+===================== */
+function saveCustom(){
 
-let msg=document.getElementById("customMsg").value;
+const message = document.getElementById("customText").value;
+const minutes = parseInt(document.getElementById("customDuration").value);
 
-localStorage.setItem("customNotification",JSON.stringify({
-message:msg,
-expire:Date.now()+900000
+if(!message || !minutes){
+alert("Enter message and duration");
+return;
+}
+
+localStorage.setItem("customNotification", JSON.stringify({
+message: message,
+expire: Date.now() + (minutes * 60 * 1000)
 }));
 
-fetch(scriptURL,{
-method:"POST",
-body:new URLSearchParams({
-type:"warning",
-subject:"CUSTOM",
-message:msg
-})
+alert("Notification sent for " + minutes + " minutes");
+}
+
+/* =====================
+   ROUTINE SYSTEM
+===================== */
+
+let routine = [];
+
+try{
+routine = JSON.parse(localStorage.getItem("routine")) || [];
+}catch(e){
+routine = [];
+}
+
+function addRoutine(){
+
+const subject = document.getElementById("subject").value;
+const startTime = document.getElementById("startTime").value;
+const duration = parseInt(document.getElementById("duration").value);
+
+if(!subject || !startTime || !duration){
+alert("Fill all fields");
+return;
+}
+
+routine.push({
+subject: subject,
+time: startTime,
+duration: duration
 });
 
-alert("Custom Notification Sent");
+localStorage.setItem("routine", JSON.stringify(routine));
+
+renderRoutine();
+
+document.getElementById("subject").value="";
+document.getElementById("startTime").value="";
+document.getElementById("duration").value="";
 }
+
+function renderRoutine(){
+
+document.getElementById("routineList").innerHTML="";
+
+routine.forEach((item,index)=>{
+
+document.getElementById("routineList").innerHTML +=
+`
+<div>
+${item.subject} - ${item.time} - ${item.duration} min
+<button onclick="deleteRoutine(${index})">Delete</button>
+</div>
+`;
+});
+}
+
+function deleteRoutine(index){
+routine.splice(index,1);
+localStorage.setItem("routine", JSON.stringify(routine));
+renderRoutine();
+}
+
+renderRoutine();
 
 </script>
 
