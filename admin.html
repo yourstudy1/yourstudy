@@ -10,8 +10,8 @@ body{
 background:#111;
 color:white;
 font-family:Segoe UI;
-padding:20px;
 margin:0;
+padding:20px;
 }
 
 .card{
@@ -34,12 +34,29 @@ color:white;
 cursor:pointer;
 }
 
-h2{
-margin-top:0;
+#loginBox{
+max-width:300px;
+margin:100px auto;
+text-align:center;
+}
+
+#adminPanel{
+display:none;
 }
 </style>
 </head>
 <body>
+
+<!-- LOGIN -->
+<div id="loginBox">
+<h2>Admin Login</h2>
+<input type="password" id="adminPass" placeholder="Enter Password">
+<br>
+<button onclick="checkPassword()">Login</button>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
 
 <h2>Admin Panel</h2>
 
@@ -56,12 +73,10 @@ margin-top:0;
 <h3>Custom Notification</h3>
 
 <input type="text" id="customText" placeholder="Enter Message">
-
 <br>
 
 <label>Duration (Minutes):</label>
-<input type="number" id="customDuration" min="1" placeholder="e.g. 10">
-
+<input type="number" id="customDuration" min="1">
 <br>
 
 <button onclick="saveCustom()">Send Notification</button>
@@ -91,76 +106,77 @@ margin-top:0;
 <div id="routineList"></div>
 </div>
 
+</div>
+
 <script>
 
-/* =====================
-   COLOR SAVE
-===================== */
-function saveColor(){
+/* 🔐 CHANGE PASSWORD HERE */
+const ADMIN_PASSWORD = "1234";
 
-const color = document.getElementById("colorPicker").value;
+/* LOGIN SYSTEM */
+function checkPassword(){
+const input=document.getElementById("adminPass").value;
 
-if(!color){
-alert("Select a color");
-return;
+if(input===ADMIN_PASSWORD){
+document.getElementById("loginBox").style.display="none";
+document.getElementById("adminPanel").style.display="block";
+}else{
+alert("Wrong Password");
+}
 }
 
-localStorage.setItem("textColor", color);
-
+/* COLOR SAVE */
+function saveColor(){
+const color=document.getElementById("colorPicker").value;
+localStorage.setItem("textColor",color);
 alert("Color Saved");
 }
 
-/* =====================
-   CUSTOM NOTIFICATION
-===================== */
+/* CUSTOM NOTIFICATION */
 function saveCustom(){
 
-const message = document.getElementById("customText").value;
-const minutes = parseInt(document.getElementById("customDuration").value);
+const message=document.getElementById("customText").value;
+const minutes=parseInt(document.getElementById("customDuration").value);
 
 if(!message || !minutes){
 alert("Enter message and duration");
 return;
 }
 
-localStorage.setItem("customNotification", JSON.stringify({
-message: message,
-expire: Date.now() + (minutes * 60 * 1000)
+localStorage.setItem("customNotification",JSON.stringify({
+message:message,
+expire:Date.now()+(minutes*60*1000)
 }));
 
-alert("Notification sent for " + minutes + " minutes");
+alert("Notification Sent for "+minutes+" minutes");
 }
 
-/* =====================
-   ROUTINE SYSTEM
-===================== */
-
-let routine = [];
-
+/* ROUTINE SYSTEM */
+let routine=[];
 try{
-routine = JSON.parse(localStorage.getItem("routine")) || [];
+routine=JSON.parse(localStorage.getItem("routine"))||[];
 }catch(e){
-routine = [];
+routine=[];
 }
 
 function addRoutine(){
 
-const subject = document.getElementById("subject").value;
-const startTime = document.getElementById("startTime").value;
-const duration = parseInt(document.getElementById("duration").value);
+const subject=document.getElementById("subject").value;
+const startTime=document.getElementById("startTime").value;
+const duration=parseInt(document.getElementById("duration").value);
 
-if(!subject || !startTime || !duration){
+if(!subject||!startTime||!duration){
 alert("Fill all fields");
 return;
 }
 
 routine.push({
-subject: subject,
-time: startTime,
-duration: duration
+subject:subject,
+time:startTime,
+duration:duration
 });
 
-localStorage.setItem("routine", JSON.stringify(routine));
+localStorage.setItem("routine",JSON.stringify(routine));
 
 renderRoutine();
 
@@ -175,7 +191,7 @@ document.getElementById("routineList").innerHTML="";
 
 routine.forEach((item,index)=>{
 
-document.getElementById("routineList").innerHTML +=
+document.getElementById("routineList").innerHTML+=
 `
 <div>
 ${item.subject} - ${item.time} - ${item.duration} min
@@ -187,7 +203,7 @@ ${item.subject} - ${item.time} - ${item.duration} min
 
 function deleteRoutine(index){
 routine.splice(index,1);
-localStorage.setItem("routine", JSON.stringify(routine));
+localStorage.setItem("routine",JSON.stringify(routine));
 renderRoutine();
 }
 
