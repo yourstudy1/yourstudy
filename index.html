@@ -67,6 +67,20 @@ let now=new Date();
 document.getElementById("time").innerText=now.toLocaleTimeString();
 document.getElementById("date").innerText=now.toDateString();
 },1000);
+let currentMode = "normal";
+
+/* SERVER থেকে MODE আনবে */
+setInterval(fetchModeFromServer,2000);
+
+function fetchModeFromServer(){
+fetch(scriptURL + "?action=status")
+.then(res=>res.json())
+.then(data=>{
+if(data.mode){
+currentMode = data.mode;
+}
+});
+}
 
 /* TEMP */
 fetch("https://api.open-meteo.com/v1/forecast?latitude=23.5&longitude=87.3&current_weather=true")
@@ -132,6 +146,28 @@ document.getElementById("tabMode").style.display="block";
 function exitTab(){
 document.getElementById("dashboard").style.display="block";
 document.getElementById("tabMode").style.display="none";
+}
+setInterval(checkModeDisplay,1000);
+
+function checkModeDisplay(){
+
+if(currentMode === "office"){
+document.getElementById("subject").innerText = "OFFICE MODE";
+document.getElementById("studyTimer").innerText = "";
+return;
+}
+
+if(currentMode === "sleep"){
+document.getElementById("subject").innerText = "SLEEP MODE";
+document.getElementById("studyTimer").innerText = "";
+return;
+}
+
+if(currentMode === "mock"){
+document.getElementById("subject").innerText = "MOCK MODE";
+return;
+}
+
 }
 
 </script>
